@@ -8,3 +8,5 @@
 ^README.Rmd$
 ^release_script.R$
 ^codemeta\.json$
+^_pkgdown.yml$
+^docs$
