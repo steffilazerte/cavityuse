@@ -2,8 +2,7 @@ Package: cavityuse
 Type: Package
 Title: Detecting Cavity Use From Geolocator Data
 Version: 0.1.0
-Authors@R: c(
-     person("Steffi", "LaZerte", email = "steffi@steffi.ca", role = c("aut","cre")))
+Authors@R: c(person("Steffi", "LaZerte", email = "steffi@steffi.ca", role = c("aut","cre"), comment = "https://orcid.org/0000-0002-7690-8360"))
 Description:
     Calculate patterns of cavity use from geolocator light data. Patterns of 
     light and dark are used to identify daytime usage, while patterns of 
