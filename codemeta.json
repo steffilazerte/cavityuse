@@ -21,7 +21,8 @@
       "@type": "Person",
       "givenName": "Steffi",
       "familyName": "LaZerte",
-      "email": "steffi@steffi.ca"
+      "email": "steffi@steffi.ca",
+      "@id": "https://orcid.org/0000-0002-7690-8360"
     }
   ],
   "maintainer": [
@@ -29,7 +30,8 @@
       "@type": "Person",
       "givenName": "Steffi",
       "familyName": "LaZerte",
-      "email": "steffi@steffi.ca"
+      "email": "steffi@steffi.ca",
+      "@id": "https://orcid.org/0000-0002-7690-8360"
     }
   ],
   "softwareSuggestions": [
@@ -211,11 +213,12 @@
   ],
   "codeRepository": "http://github.com/steffilazerte/cavityuse",
   "releaseNotes": "https://github.com/steffilazerte/cavityuse/blob/master/NEWS.md",
-  "fileSize": "254.266KB",
+  "fileSize": "408.567KB",
   "contIntegration": [
     "https://travis-ci.org/steffilazerte/cavityuse",
     "https://ci.appveyor.com/project/steffilazerte/cavityuse/branch/master",
     "https://codecov.io/gh/steffilazerte/cavityuse"
   ],
-  "issueTracker": "http://github.com/steffilazerte/cavityuse/issues"
+  "issueTracker": "http://github.com/steffilazerte/cavityuse/issues",
+  "readme": "https://github.com/steffilazerte/cavityuse/blob/master/README.md"
 }
