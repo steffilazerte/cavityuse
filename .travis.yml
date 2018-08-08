@@ -1,5 +1,43 @@
 # R for travis: see documentation at https://docs.travis-ci.com/user/languages/r
 
-language: R
+language: r
 sudo: false
 cache: packages
+git:
+  depth: 150
+
+matrix:
+  include:
+    - os: linux
+      dist: trusyt
+      r: devel
+
+    - os: linux
+      dist: trusty
+      r: release
+
+    - os: linux
+      r: oldrel
+
+    - os: osx
+      r: release
+
+    - os: osx
+      r: oldrel
+
+    - os: osx
+      r: devel
+
+  allow_failures:
+    - os: linux
+      dist: trusty
+      r: devel
+
+    - os: osx
+      r: devel
+
+r_packages:
+  - covr
+
+after_success:
+  - Rscript -e 'library(covr); codecov()'
