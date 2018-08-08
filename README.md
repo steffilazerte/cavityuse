@@ -8,7 +8,7 @@ cavityuse
 
 `cavityuse` is an R package for calculating patterns of cavity use from geolocator light data. Patterns of light and dark are used to identify daytime usage, while patterns of sunrise/sunset are used to identify nighttime usage.
 
-> While `cavityuse` is ready to be experimented with, it's still in early development. Please give me a hand by letting me know of any problems you have (missing functionality, difficult to use, bugs, etc.)
+> While `cavityuse` is ready to be experimented with, it's still in early development and should be considered **experimental**. Please give me a hand by letting me know of any problems you have (missing functionality, difficult to use, bugs, etc.)
 
 Installing `cavityuse`
 ----------------------
