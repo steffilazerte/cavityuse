@@ -1,0 +1,10 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^data-raw$
+^appveyor\.yml$
+^\.travis\.yml$
+^CONDUCT\.md$
+^codecov\.yml$
+^README.Rmd$
+^release_script.R$
+^codemeta\.json$

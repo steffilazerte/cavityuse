@@ -1,0 +1,134 @@
+---
+output: github_document
+---
+
+
+# cavityuse  
+_Detecting Cavity Use From Geolocator Data_  
+
+[![Build Status](https://travis-ci.org/steffilazerte/cavityuse.svg?branch=master)](https://travis-ci.org/steffilazerte/cavityuse) [![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/l2afqnduhmmir3xl/branch/master?svg=true)](https://ci.appveyor.com/project/steffilazerte/cavityuse/branch/master) [![codecov](https://codecov.io/gh/steffilazerte/cavityuse/branch/master/graph/badge.svg)](https://codecov.io/gh/steffilazerte/cavityuse)
+
+
+`cavityuse` is an R package for calculating patterns of cavity use from geolocator light data. Patterns of light and dark are used to identify daytime usage, while patterns of sunrise/sunset are used to identify nighttime usage.
+
+> While `cavityuse` is ready to be experimented with, it's still in early development. Please give me a hand by letting me know of any problems you have (missing functionality, difficult to use, bugs, etc.)
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(fig.path = "tools/readme/", out.width = "100%", 
+                      fig.asp = 0.5, fig.width = 10)
+```
+
+## Installing `cavityuse`
+
+You can use the `devtools` package to install `cavityuse` directly from GitHub
+
+```{r}
+devtools::install_github("steffilazerte/cavityuse")
+```
+
+## Getting started
+
+Load the package
+```{r}
+library(cavityuse)
+```
+
+We'll get started with the built in example file `flicker`
+
+Let's take a look at the patterns in the raw data:
+```{r}
+cavity_plot(flicker)
+```
+
+Look for any sunrise/sunset events in your geolocator data
+```{r}
+s <- sun_detect(flicker)
+s
+```
+
+Let's see what these look like
+```{r}
+cavity_plot(data = flicker, sun = s, start = "2011-06-17", days = 1)
+```
+
+Using these detected times, assign the rest of the light data to bouts of cavity use:
+
+```{r}
+e <- cavity_detect(flicker, sun = s)
+e
+```
+
+Let's see how these assignments match the patterns we see
+
+```{r}
+cavity_plot(data = flicker, cavity = e, sun = s)
+```
+
+
+## With your own data
+
+You data must be in a data frame with the columns called `time` and `light`.
+
+- `time` must be in a `date/time` format
+- `light` must be a number, representing light levels in lux (low = dark, high = light)
+
+For example:
+
+```{r, echo = FALSE}
+dplyr::select(flicker, time, light)
+```
+
+Consider using the [`lubridate`](https://lubridate.tidyverse.org/) package to format your times
+
+### Timezones  
+
+Although most geolocator data is in the UTC timezone, to more efficiently detect sunrise/sunset times, your data should be in the timezone of your location (non-daylight savings).
+ 
+You can use the `tz_offset` function to determine what timezone this would be, and the `with_tz` function from the lubridate package to assign this timezone to your data:
+
+```{r}
+tz_offset("America/Vancouver")
+```
+
+```{r, eval = FALSE}
+library(lubridate)
+data$time <- with_tz(data$time, "Etc/GMT+8")
+```
+
+### Coordinates
+`cavityuse` functions require coordinates in order to more efficiently detect sunrise/sunset times, but also to estimate sunrise/sunset when they are not detected in the data. 
+
+You can supply coordinates in one of two ways.
+
+1. You can have `lon` and `lat` columns, indicating the decimal coordinates for your location either in your data
+
+```{r, echo = FALSE}
+dplyr::select(flicker, time, light, lon, lat)
+```
+
+2. You can have a separte variable that you supply to each function (order matters, and must be `lon`, `lat`):
+
+```{r, eval = FALSE}
+sun_times(data, loc = c(-120.3408, 50.67611))
+```
+
+
+## Limitations
+
+Right now, `cavityuse` is limited to the follow scenarios:
+
+- **No big changes in location (i.e. No migration)**
+  Changes in location can interfere with how `cavityuse` assigns activity based on sunrise/sunset times which are inferred from lon/lat (this may change in the future)
+- **No extreme latitudes**
+  Because of the way `cavityuse` detects sunrise and sunset, extremely latitudes may result in unpredicatable behaviour (this should hopefully be fixed in the future)
+- **Animals which use cavities at night, must normally enter their cavity _before_ it gets dark and exit _after_ it gets light**
+  With out the ability to detect sunrise/sunset it is impossible to determine cavityuse at night
+
+
+
+Please note that this project is released with a [Contributor Code of Conduct](CONDUCT.md). By participating in this project you agree to abide by its terms.
+
+
+
+
+

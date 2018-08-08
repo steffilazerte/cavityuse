@@ -1,0 +1,33 @@
+Package: cavityuse
+Type: Package
+Title: Detecting Cavity Use From Geolocator Data
+Version: 0.1.0
+Authors@R: c(
+     person("Steffi", "LaZerte", email = "steffi@steffi.ca", role = c("aut","cre")))
+Description:
+    Calculate patterns of cavity use from geolocator light data. Patterns of 
+    light and dark are used to identify daytime usage, while patterns of 
+    sunrise/sunset are used to identify nighttime usage.
+License: GPL-3 + file LICENSE
+Encoding: UTF-8
+Language: en-CA
+LazyData: true
+URL: http://github.com/steffilazerte/cavityuse
+BugReports: http://github.com/steffilazerte/cavityuse/issues
+Depends:
+    R (>= 3.2)
+Imports:
+    broom (>= 0.5.0),
+    dplyr (>= 0.7.0),
+    ggplot2(>= 2.2.1),
+    lubridate (>= 1.5.6),
+    magrittr (>= 1.5),
+    maptools (>= 0.9.3),
+    purrr (>= 0.2.5),
+    rlang (>= 0.2.0),
+    stringr (>= 1.3.1),
+    tibble (>= 1.2),
+    tidyr (>= 0.4.1)
+Suggests: testthat,
+    covr
+RoxygenNote: 6.0.1
