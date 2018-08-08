@@ -2,19 +2,17 @@
 output: github_document
 ---
 
+[![Build Status](https://travis-ci.org/steffilazerte/cavityuse.svg?branch=master)](https://travis-ci.org/steffilazerte/cavityuse) [![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/l2afqnduhmmir3xl/branch/master?svg=true)](https://ci.appveyor.com/project/steffilazerte/cavityuse/branch/master) [![codecov](https://codecov.io/gh/steffilazerte/cavityuse/branch/master/graph/badge.svg)](https://codecov.io/gh/steffilazerte/cavityuse)
 
 # cavityuse  
 _Detecting Cavity Use From Geolocator Data_  
 
-[![Build Status](https://travis-ci.org/steffilazerte/cavityuse.svg?branch=master)](https://travis-ci.org/steffilazerte/cavityuse) [![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/l2afqnduhmmir3xl/branch/master?svg=true)](https://ci.appveyor.com/project/steffilazerte/cavityuse/branch/master) [![codecov](https://codecov.io/gh/steffilazerte/cavityuse/branch/master/graph/badge.svg)](https://codecov.io/gh/steffilazerte/cavityuse)
-
-
 `cavityuse` is an R package for calculating patterns of cavity use from geolocator light data. Patterns of light and dark are used to identify daytime usage, while patterns of sunrise/sunset are used to identify nighttime usage.
 
-> While `cavityuse` is ready to be experimented with, it's still in early development. Please give me a hand by letting me know of any problems you have (missing functionality, difficult to use, bugs, etc.)
+> While `cavityuse` is ready to be experimented with, it's still in early development and should be considered **experimental**. Please give me a hand by letting me know of any problems you have (missing functionality, difficult to use, bugs, etc.)
 
 ```{r, include = FALSE}
-knitr::opts_chunk$set(fig.path = "tools/readme/", out.width = "100%", 
+knitr::opts_chunk$set(fig.path = "man/figures/", out.width = "100%", 
                       fig.asp = 0.5, fig.width = 10)
 ```
 

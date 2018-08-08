@@ -1,10 +1,10 @@
 
+[![Build Status](https://travis-ci.org/steffilazerte/cavityuse.svg?branch=master)](https://travis-ci.org/steffilazerte/cavityuse) [![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/l2afqnduhmmir3xl/branch/master?svg=true)](https://ci.appveyor.com/project/steffilazerte/cavityuse/branch/master) [![codecov](https://codecov.io/gh/steffilazerte/cavityuse/branch/master/graph/badge.svg)](https://codecov.io/gh/steffilazerte/cavityuse)
+
 cavityuse
 =========
 
 *Detecting Cavity Use From Geolocator Data*
-
-[![Build Status](https://travis-ci.org/steffilazerte/cavityuse.svg?branch=master)](https://travis-ci.org/steffilazerte/cavityuse) [![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/l2afqnduhmmir3xl/branch/master?svg=true)](https://ci.appveyor.com/project/steffilazerte/cavityuse/branch/master) [![codecov](https://codecov.io/gh/steffilazerte/cavityuse/branch/master/graph/badge.svg)](https://codecov.io/gh/steffilazerte/cavityuse)
 
 `cavityuse` is an R package for calculating patterns of cavity use from geolocator light data. Patterns of light and dark are used to identify daytime usage, while patterns of sunrise/sunset are used to identify nighttime usage.
 
@@ -40,7 +40,7 @@ Let's take a look at the patterns in the raw data:
 cavity_plot(flicker)
 ```
 
-<img src="tools/readme/unnamed-chunk-4-1.png" width="100%" />
+<img src="man/figures/unnamed-chunk-4-1.png" width="100%" />
 
 Look for any sunrise/sunset events in your geolocator data
 
@@ -60,7 +60,7 @@ Let's see what these look like
 cavity_plot(data = flicker, sun = s, start = "2011-06-17", days = 1)
 ```
 
-<img src="tools/readme/unnamed-chunk-6-1.png" width="100%" />
+<img src="man/figures/unnamed-chunk-6-1.png" width="100%" />
 
 Using these detected times, assign the rest of the light data to bouts of cavity use:
 
@@ -91,7 +91,7 @@ Let's see how these assignments match the patterns we see
 cavity_plot(data = flicker, cavity = e, sun = s)
 ```
 
-<img src="tools/readme/unnamed-chunk-8-1.png" width="100%" />
+<img src="man/figures/unnamed-chunk-8-1.png" width="100%" />
 
 With your own data
 ------------------
