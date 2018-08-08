@@ -143,7 +143,7 @@ data$time <- with_tz(data$time, "Etc/GMT+8")
 
 You can supply coordinates in one of two ways.
 
-1.  You can have `lon` and `lat` columns, indicating the decimal coordinates for your location either in your data
+-   You can have `lon` and `lat` columns, indicating the decimal coordinates for your location either in your data
 
 <!-- -->
 
@@ -162,7 +162,7 @@ You can supply coordinates in one of two ways.
     ## 10 2011-06-17 00:18:50     0 -120.  50.7
     ## # ... with 3,590 more rows
 
-1.  You can have a separte variable that you supply to each function (order matters, and must be `lon`, `lat`):
+-   You can have a separte variable that you supply to each function (order matters, and must be `lon`, `lat`):
 
 ``` r
 sun_times(data, loc = c(-120.3408, 50.67611))
