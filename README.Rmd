@@ -22,7 +22,7 @@ knitr::opts_chunk$set(fig.path = "tools/readme/", out.width = "100%",
 
 You can use the `devtools` package to install `cavityuse` directly from GitHub
 
-```{r}
+```{r, eval = FALSE}
 devtools::install_github("steffilazerte/cavityuse")
 ```
 
@@ -100,13 +100,13 @@ data$time <- with_tz(data$time, "Etc/GMT+8")
 
 You can supply coordinates in one of two ways.
 
-1. You can have `lon` and `lat` columns, indicating the decimal coordinates for your location either in your data
+(1) You can have `lon` and `lat` columns, indicating the decimal coordinates for your location either in your data
 
 ```{r, echo = FALSE}
 dplyr::select(flicker, time, light, lon, lat)
 ```
 
-2. You can have a separte variable that you supply to each function (order matters, and must be `lon`, `lat`):
+(2) You can have a separte variable that you supply to each function (order matters, and must be `lon`, `lat`):
 
 ```{r, eval = FALSE}
 sun_times(data, loc = c(-120.3408, 50.67611))

@@ -19,11 +19,6 @@ You can use the `devtools` package to install `cavityuse` directly from GitHub
 devtools::install_github("steffilazerte/cavityuse")
 ```
 
-    ## Downloading GitHub repo steffilazerte/cavityuse@master
-    ## from URL https://api.github.com/repos/steffilazerte/cavityuse/zipball/master
-
-    ## Installation failed: Does not appear to be an R package (no DESCRIPTION)
-
 Getting started
 ---------------
 
