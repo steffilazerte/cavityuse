@@ -71,7 +71,7 @@
       "@type": "SoftwareApplication",
       "identifier": "broom",
       "name": "broom",
-      "version": ">= 0.5.0",
+      "version": ">= 0.4.3",
       "provider": {
         "@id": "https://cran.r-project.org",
         "@type": "Organization",
@@ -213,12 +213,13 @@
   ],
   "codeRepository": "http://github.com/steffilazerte/cavityuse",
   "releaseNotes": "https://github.com/steffilazerte/cavityuse/blob/master/NEWS.md",
-  "fileSize": "408.567KB",
+  "fileSize": "222.046KB",
   "contIntegration": [
     "https://travis-ci.org/steffilazerte/cavityuse",
     "https://ci.appveyor.com/project/steffilazerte/cavityuse/branch/master",
     "https://codecov.io/gh/steffilazerte/cavityuse"
   ],
   "issueTracker": "http://github.com/steffilazerte/cavityuse/issues",
-  "readme": "https://github.com/steffilazerte/cavityuse/blob/master/README.md"
+  "readme": "https://github.com/steffilazerte/cavityuse/blob/master/README.md",
+  "keywords": ["r", "geolocator", "animals", "biology", "data", "animal-behaviour"]
 }
