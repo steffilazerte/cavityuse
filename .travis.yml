@@ -9,7 +9,7 @@ git:
 matrix:
   include:
     - os: linux
-      dist: trusyt
+      dist: trusty
       r: devel
 
     - os: linux
