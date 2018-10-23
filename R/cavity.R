@@ -248,15 +248,30 @@ cavity_simplify <- function(cavity, gap_cutoff) {
   cavity <- dplyr::mutate(cavity,
                           int = as.numeric(difftime(dplyr::lead(.data$time),
                                                     .data$time, units = "min")))
-
   # Get overall bout types and times
   cavity <- dplyr::mutate(cavity, type = dplyr::case_when(
+    # Single point of a given type
     .data$location != dplyr::lag(.data$location, default = "") &
       .data$location != dplyr::lead(.data$location, default = "") ~ "start/end",
-    .data$location != dplyr::lag(.data$location, default = "") ~ "start",
-    .data$location != dplyr::lead(.data$location, default = "") ~ "end",
+    # Change in previous point type and close to the next
+    .data$location != dplyr::lag(.data$location, default = "") &
+      .data$int <= gap_cutoff ~ "start",
+    # Change in next point type and close to previous
+    .data$location != dplyr::lead(.data$location, default = "") &
+      dplyr::lag(.data$int) <= gap_cutoff ~ "end",
+    # Change in previous point type and too far from next
+    .data$location != dplyr::lag(.data$location, default = "") &
+      .data$int > gap_cutoff ~ "start/end",
+    # Change in next point type and too far from previous
+    .data$location != dplyr::lead(.data$location, default = "") &
+      dplyr::lag(.data$int) > gap_cutoff ~ "start/end",
+    # Isolated point
+    dplyr::lag(.data$int) > gap_cutoff & .data$int > gap_cutoff ~ "start/end",
+    # Next point too far
     .data$int > gap_cutoff ~ "end",
-    dplyr::lag(.data$int) > gap_cutoff ~ "start"))
+    # Previous point too far
+    dplyr::lag(.data$int) > gap_cutoff ~ "start")
+    )
 
   cavity <- dplyr::select(cavity,
                           -.data$forward, -.data$backward)
