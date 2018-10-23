@@ -54,7 +54,7 @@ sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
 
   check_cols(data, c("time", "light"))
   check_time(data$time)
-  check_date(data)
+  data <- check_date(data)
   check_class(data$light, "numeric")
   loc <- check_loc(data, loc)
 
@@ -240,6 +240,7 @@ sun_times <- function(loc, date, tz, angle = 6,
 }
 
 sun_local <- function(loc, date, tz, type = "dawndusk", angle = 12) {
+
   temp <- sun_times(loc = c(loc[1], loc[2]), date = date,
                     tz = tz, type = type, angle = angle) %>%
     dplyr::mutate(

@@ -86,7 +86,7 @@ cavity_detect <- function(data, sun, loc = NULL, n = 2,
   check_cols(sun, c("time", "dir", "n_range", "n", "dur"))
 
   check_time(data$time)
-  check_date(data)
+  data <- check_date(data)
   check_class(data$light, "numeric")
 
   check_time(sun$time)
