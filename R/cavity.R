@@ -74,23 +74,29 @@
 #' cavity_plot(d$light_data[[2]], cavity = d$e[[2]], sun = d$s[[2]])
 #'
 #'
-cavity_detect <- function(data, sun, loc = NULL, n = 2,
+cavity_detect <- function(data, sun = NULL, loc = NULL, n = 2,
                           thresh_dark = 1, thresh_light = 60,
                           ambig_dark = 10, ambig_light = 25,
                           gap_cutoff = 10) {
 
   # Input Checks
   check_data(data)
-  check_data(sun)
   check_cols(data, c("time", "light"))
-  check_cols(sun, c("time", "dir", "n_range", "n", "dur"))
-
   check_time(data$time)
   data <- check_date(data)
   check_class(data$light, "numeric")
 
-  check_time(sun$time)
-  check_date(sun)
+  if(!is.null(sun)) {
+    check_data(sun)
+    check_cols(sun, c("time", "dir", "n_range", "n", "dur"))
+    check_time(sun$time)
+    sun <- check_date(sun)
+  } else {
+    sun <- dplyr::select(data, date, time, light) %>%
+      dplyr::filter(is.na(light)) %>%
+      dplyr::mutate(dir = as.character(NA), n_range = as.numeric(NA),
+                    n = as.integer(NA), dur = as.numeric(NA))
+  }
 
   loc <- check_loc(data, loc)
 

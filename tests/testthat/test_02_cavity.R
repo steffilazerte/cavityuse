@@ -48,7 +48,7 @@ test_that("cavity_detect fails gracefully on wrong format", {
   expect_error(cavity_detect(data.frame(time = LETTERS,
                                         light = sample(0:64, 26,
                                                        replace = TRUE))),
-               "argument \"sun\" is missing")
+               "time column is not in time class")
   s <- sun_detect(wtsp)
 
   expect_error(cavity_detect(dplyr::mutate(wtsp, light = as.character(light)),
