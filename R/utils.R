@@ -45,6 +45,15 @@ check_date <- function(x) {
 check_data <- function(data) {
   if(!is.data.frame(data)) stop(deparse(substitute(data)),
                                 " must be a data frame", call. = FALSE)
+  if(nrow(data) == 0) stop(deparse(substitute(data)),
+                           " must have more than 0 rows of data", call. = FALSE)
+
+  n <- dplyr::if_else(nrow(data) > 60000, 60000L, nrow(data))
+  if(any(dplyr::count(data[1:n,], .data$time)$n > 1)) {
+    stop("There are duplicate times in ", deparse(substitute(data)), ". ",
+         "Ensure make sure you are analyzing only one individual at a time",
+         call. = FALSE)
+  }
 }
 
 check_loc <- function(x, loc) {
