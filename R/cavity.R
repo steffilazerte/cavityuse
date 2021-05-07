@@ -82,9 +82,14 @@ cavity_detect <- function(data, sun = NULL, loc = NULL, n = 2,
   # Input Checks
   check_data(data)
   check_cols(data, c("time", "light"))
-  check_time(data$time)
-  data <- check_date(data)
   check_class(data$light, "numeric")
+
+  check_time(data$time)
+
+  loc <- check_loc(data, loc)
+  tz_offset <- tz_offset(loc[1], loc[2])
+  data <- tz_apply_offset(data, tz_offset)
+  data <- check_date(data)
 
   if(!is.null(sun)) {
     check_data(sun)
@@ -98,35 +103,30 @@ cavity_detect <- function(data, sun = NULL, loc = NULL, n = 2,
                     n = as.integer(NA), dur = as.numeric(NA))
   }
 
-  loc <- check_loc(data, loc)
-
-
   # Ungoup
   if(dplyr::is.grouped_df(data)) data <- dplyr::ungroup(data)
   if(dplyr::is.grouped_df(sun)) sun <- dplyr::ungroup(sun)
 
 
   data <- points_sun_times(data, sun = sun,
-                          thresh_dark, thresh_light,
-                          ambig_dark, ambig_light)
+                           thresh_dark, thresh_light,
+                           ambig_dark, ambig_light)
 
   cavity <- cavity_assign(data, n)
   cavity <- cavity_simplify(cavity, gap_cutoff = gap_cutoff)
-
   cavity <- cavity_spread(cavity)
-  cavity <- cavity_fix(cavity, loc = loc, gap_cutoff)
+  cavity <- cavity_fix(cavity, loc = loc, gap_cutoff = gap_cutoff)
   cavity <- cavity_finalize(cavity)
 
   cavity <- cavity_split(cavity)
 
   # Add run details
-  cavity <- dplyr::mutate(cavity,
-                          thresh_dark = thresh_dark,
-                          thresh_light = thresh_light,
-                          ambig_dark = ambig_dark,
-                          ambig_light = ambig_light)
-
-  cavity
+  dplyr::mutate(cavity,
+                lon = loc[['lon']], lat = loc[['lat']],
+                thresh_dark = thresh_dark,
+                thresh_light = thresh_light,
+                ambig_dark = ambig_dark,
+                ambig_light = ambig_light)
 }
 
 
@@ -332,7 +332,7 @@ cavity_spread <- function(cavity) {
 cavity_fix <- function(cavity, loc, gap_cutoff) {
   sun_local <- sun_local(loc = loc,
                          date = unique(lubridate::as_date(cavity$start)),
-                         tz = lubridate::tz(cavity$start), angle = 6)
+                         angle = 6)
 
   # If
   # - A location is "in"
@@ -384,6 +384,6 @@ cavity_finalize <- function(cavity) {
                   length_hrs = as.numeric(difftime(.data$end, .data$start,
                                                    units = "hours"))) %>%
     dplyr::select(.data$date, .data$start, .data$end,
-                  .data$length_hrs, .data$location) %>%
+                  .data$length_hrs, .data$location, .data$offset_applied) %>%
     dplyr::arrange(.data$start)
 }

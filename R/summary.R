@@ -143,13 +143,11 @@ split_calc <- function(cavity, split, sun = NULL, loc = NULL) {
     cavity <- dplyr::mutate(cavity,
                             splt = lubridate::ymd_hms(
                               paste0(.data$date + lubridate::days(1),
-                                     "00:00:00"),
-                              tz = lubridate::tz(.data$start)))
+                                     "00:00:00"), tz = "UTC"))
   } else if(split == "midday") {
     cavity <- dplyr::mutate(cavity,
                             splt = lubridate::ymd_hms(
-                              paste0(.data$date, "12:00:00"),
-                              tz = lubridate::tz(.data$start)))
+                              paste0(.data$date, "12:00:00"), tz = "UTC"))
   } else if(split %in% c("sunrise", "sunset")) {
     # Get rise/set from data if exists
     if(!is.null(sun)) {
@@ -166,8 +164,7 @@ split_calc <- function(cavity, split, sun = NULL, loc = NULL) {
 
       if(nrow(cavity_add) > 0) {
         cavity <- sun_times(loc = loc, date = unique(cavity_add$date),
-                            type = "dawndusk", angle = 6,
-                            tz = lubridate::tz(cavity_add$start))
+                            type = "dawndusk", angle = 6)
         names(cavity)[names(cavity) == split] <- "splt"
       }
 

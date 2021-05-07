@@ -4,15 +4,13 @@
 \alias{sun_times}
 \title{Get sunrise/sunset times}
 \usage{
-sun_times(loc, date, tz, angle = 6, interval = "none", type = "riseset")
+sun_times(loc, date, angle = 6, interval = "none", type = "riseset")
 }
 \arguments{
 \item{loc}{Vector/Data frame. Longitude and Latitude coordinates for location
 of sun rise/set}
 
 \item{date}{Vector. Date(s) to calculate sun rise/set for.}
-
-\item{tz}{Timezone of the dates.}
 
 \item{angle}{Numeric. For type = "riseset" the angle of the sun (6 = civil
 twilight)}

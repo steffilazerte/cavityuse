@@ -60,18 +60,28 @@ cavity_plot <- function(data, cavity = NULL, sun = NULL, loc = NULL,
                         nrow = NULL, ncol = NULL, clip = TRUE,
                         show_night = TRUE) {
 
-  tz <- lubridate::tz(data$time)
+  check_data(data)
+  check_cols(data, c("time", "light"))
+  check_class(data$light, "numeric")
 
-  if(is.null(start)) {
-    start_plot <- min(data$time)
-  } else {
-    start_plot <- as.POSIXct(start, tz = tz)
+  check_time(data$time)
+
+  ## Offset data if cavity, sun or loc available
+  if(!is.null(cavity) && cavity$offset_applied != 0) {
+    data <- tz_apply_offset(data, cavity$offset_applied[1])
+  } else if(!is.null(sun) && sun$offset_applied != 0) {
+    data <- tz_apply_offset(data, cavity$offset_applied[1])
+  } else if(!is.null(loc)) {
+    loc <- check_loc(data, loc)
+    tz_offset <- tz_offset(loc[1], loc[2])
+    data <- tz_apply_offset(data, tz_offset)
   }
 
-  start_plot <- lubridate::force_tz(start_plot, tz = tz)
-  start_plot <- lubridate::floor_date(start_plot, unit = "days")
-
-  data$time <- lubridate::with_tz(data$time, tz = tz)
+  if(is.null(start)) {
+    start_plot <- lubridate::floor_date(min(data$time), unit = "days")
+  } else {
+    start_plot <- lubridate::as_date(start)
+  }
 
   if(clip) data$light[data$light > 64] <- 64
 
@@ -81,9 +91,13 @@ cavity_plot <- function(data, cavity = NULL, sun = NULL, loc = NULL,
 
   data <- dplyr::filter(data, .data$time >= start_plot,
                         .data$time < start_plot + lubridate::days(days)) %>%
-    dplyr::mutate(date = lubridate::as_date(.data$time, tz = tz))
+    dplyr::mutate(date = lubridate::as_date(.data$time))
 
-  if(nrow(data) == 0) stop("No data for these dates", call. = FALSE)
+  if(nrow(data) == 0) {
+    message("No data for these dates (",
+            start_plot, " - ", start_plot + lubridate::days(days), ")")
+    return(invisible())
+  }
 
   if(!is.null(cavity)) {
     cavity <- cavity %>%
@@ -146,9 +160,9 @@ cavity_plot <- function(data, cavity = NULL, sun = NULL, loc = NULL,
     ggplot2::scale_x_datetime(date_labels = "%H:%M") +
     ggplot2::labs(x = "Time", y = "Light levels", fill = "Location")
 
-  if(!is.null(tz) & show_night) {
+  if(show_night) {
     loc <- check_loc(data, loc)
-    sun_t <- sun_times(loc = loc, date = unique(data$date), tz = tz,
+    sun_t <- sun_times(loc = loc, date = unique(data$date),
                        type = "dawndusk", angle = 6) %>%
       dplyr::mutate(rise_null = lubridate::floor_date(.data$sunrise, "days"),
                     set_null = lubridate::ceiling_date(.data$sunset, "days"),

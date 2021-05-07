@@ -28,22 +28,17 @@ check_time <- function(t) {
   if(!lubridate::is.POSIXct(t)) {
     stop("time column is not in time class. ",
          "Consider the lubridate package to convert", call. = FALSE)
-  } else if(is_dst(lubridate::tz(t))) {
-    warning("Timezone has daylight savings. Consider using the `tz_offset()` ",
-             "function to get the equivalent timezone without DST. Use the ",
-             "lubridate::with_tz() function to transform your times")
-  } else if (lubridate::tz(t) %in% c("UTC", "GMT")) {
-    warning("Timezone is UTC/GMT, but cavityuse requires real local timezones ",
-            "are used. Unnless this is the true timezone of the data, convert ",
-            "to the local non-DST timezone.")
+  } else if (!lubridate::tz(t) %in% c("UTC", "GMT")) {
+    stop("Timezone is not UTC/GMT. Most geolocators return time data as UTC. ",
+         "Please convert your data back to UTC ",
+         "(e.g., `data$time <- lubridate::with_tz(data$time, tz = \"UTC\")",
+         call. = FALSE)
   }
 }
 
 
 check_date <- function(x) {
- if(!"date" %in% names(x) || !lubridate::is.Date(x$date)) {
   x$date <- lubridate::as_date(x$time)
- }
   x
 }
 
@@ -98,21 +93,12 @@ check_tz <- function(tz) {
 }
 
 
-#' Calculate non-daylight savings timezone offset from UTC
-#'
-#' @param tz Character. Timezone to calculate offset from
-#'
-#' @export
-tz_offset <- function(tz) {
-  tz <- check_tz(tz)
-
-  t <- as.numeric(difftime(as.POSIXct("2016-01-01 00:00:00", tz = "UTC"),
-                           as.POSIXct("2016-01-01 00:00:00", tz = tz), units = "hours"))
-
-  if(t > 0) t <- paste0("Etc/GMT-", t)
-  if(t <= 0) t <- paste0("Etc/GMT+", abs(t))
-  t
+tz_offset <- function(lon, lat) {
+  lutz::tz_lookup_coords(lat[1], lon[1], method = "accurate") %>%
+    lutz::tz_offset(lubridate::ymd("2020-01-01"), .) %>%
+    dplyr::pull(.data$utc_offset_h)
 }
+
 
 is_dst <- function(tz) {
   tz <- check_tz(tz)
@@ -120,3 +106,16 @@ is_dst <- function(tz) {
   t2 <- lubridate::with_tz(as.POSIXct("2018-06-01", tz = tz), "UTC")
  if(lubridate::hour(t1) != lubridate::hour(t2)) TRUE else FALSE
 }
+
+tz_apply_offset <- function(data, tz_offset) {
+  dplyr::mutate(data,
+                time = time + lubridate::hours(tz_offset),
+                offset_applied = tz_offset)
+}
+
+tz_remove_offset <- function(data, tz_offset) {
+  dplyr::mutate(data,
+                time = time - lubridate::hours(tz_offset),
+                offset_applied = 0)
+}
+

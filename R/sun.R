@@ -52,11 +52,17 @@
 sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
                        local = TRUE, filter_problems = TRUE) {
 
+  check_data(data)
   check_cols(data, c("time", "light"))
-  check_time(data$time)
-  data <- check_date(data)
   check_class(data$light, "numeric")
+
+  check_time(data$time)
   loc <- check_loc(data, loc)
+
+  tz_offset <- tz_offset(loc[1], loc[2])
+  data <- tz_apply_offset(data, tz_offset)
+
+  data <- check_date(data)
 
   # Need to think about range cut off (what is an appropriate value?)
 
@@ -67,14 +73,13 @@ sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
                                                 dplyr::lag(data$time))),
                      na.rm = TRUE)
   s <- data
+
   # Confine to actual local sunset/sunrise times
   if(local) {
-    sun_local <- sun_local(loc = c(loc[1], loc[2]),
-                           date = unique(s$date),
-                           tz = lubridate::tz(s$time))
+    sun_local <- sun_local(loc = loc, date = unique(s$date))
 
     s <- s %>%
-      dplyr::left_join(sun_local, by = "date") %>%
+      dplyr::left_join(sun_local, by = c("date", "offset_applied")) %>%
       dplyr::mutate(type = dplyr::case_when(
         .data$time >= .data$sunrise & .data$time <=
           .data$sunrise + lubridate::hours(3) ~ "sunrise",
@@ -108,7 +113,8 @@ sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
 
   if(nrow(s) > 0) {
     s <- dplyr::select(s, .data$date, .data$time, .data$light,
-                       .data$n_range, .data$coef, .data$dir, .data$type) %>%
+                       .data$n_range, .data$coef, .data$dir, .data$type,
+                       .data$offset_applied) %>%
       tidyr::unnest(.data$coef) %>%
       dplyr::select(-.data$df, -.data$logLik, -.data$AIC, -.data$BIC,
                     -.data$deviance, -.data$df.residual) %>%
@@ -130,7 +136,8 @@ sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
                        .data$statistic, .data$p.value) %>%
         dplyr::slice(1) %>%
         dplyr::select(.data$date, .data$time, .data$dir,
-                      .data$n_range, .data$n, .data$dur) %>%
+                      .data$n_range, .data$n, .data$dur,
+                      .data$offset_applied) %>%
         dplyr::ungroup()
     }
 
@@ -140,12 +147,14 @@ sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
     # If light activity before sunrise or after sunset, not a true sunrise/set detection
     if(filter_problems && nrow(s) > 0) s <- sun_filter(data, s)
   } else s <- dplyr::select(s, .data$date, .data$time, .data$dir,
-                            .data$n_range, .data$n)
+                            .data$n_range, .data$n, .data$offset_applied)
+
   s
 }
 
 sun_filter <- function(data, times) {
 
+  # Get median time between observations
   i <- stats::median(as.numeric(difftime(dplyr::lead(data$time),
                                          data$time, units = "min")),
                      na.rm = TRUE)
@@ -156,10 +165,11 @@ sun_filter <- function(data, times) {
     dplyr::mutate(id = .data$time) %>%
     dplyr::select(.data$time, .data$dir, .data$id) %>%
     tidyr::spread(.data$dir, .data$id) %>%
-    dplyr::right_join(data, by = "time")
+    dplyr::right_join(data, by = "time") %>%
+    dplyr::arrange(time)
 
-  if(!"sunrise" %in% names(data)) data$sunrise <- lubridate::ymd_hms(NA, tz = lubridate::tz(data$time))
-  if(!"sunset" %in% names(data)) data$sunset <-  lubridate::ymd_hms(NA, tz = lubridate::tz(data$time))
+  if(!"sunrise" %in% names(data)) data$sunrise <- lubridate::ymd_hms(NA, tz = "UTC")
+  if(!"sunset" %in% names(data)) data$sunset <-  lubridate::ymd_hms(NA, tz = "UTC")
 
 
   # Check for problematic sunrise/sets
@@ -167,10 +177,18 @@ sun_filter <- function(data, times) {
   sr <- which(!is.na(data$sunrise))
   ss <- which(!is.na(data$sunset))
 
-  # Mark the two hours before/after sunrise/set
-  for(n in 1:(120/i))  {
-    data$sunrise[sr-n] <- data$sunrise[sr]
-    data$sunset[ss+n] <- data$sunset[ss]
+  # Mark the two hours before sunrise and after set
+
+  for(s in sr) {
+    n <- s - (1:(120/i))
+    n <- n[n >= 0 & n <= nrow(data)]
+    data$sunrise[n] <- data$sunrise[s]
+  }
+
+  for(s in ss) {
+    n <- s + (1:(120/i))
+    n <- n[n >= 0 & n <= nrow(data)]
+    data$sunset[n] <- data$sunset[s]
   }
 
   # Look for activity in these two hours
@@ -203,18 +221,21 @@ sun_assume <- function(dates, loc) {
 #' @param loc Vector/Data frame. Longitude and Latitude coordinates for location
 #'   of sun rise/set
 #' @param date Vector. Date(s) to calculate sun rise/set for.
-#' @param tz Timezone of the dates.
 #' @param angle Numeric. For type = "riseset" the angle of the sun (6 = civil
 #'   twilight)
 #' @param interval Character. How to organize the sunrise/sunset times
 #' @param type Character. What kind of sunrise/sunset to calculate
 #'
-sun_times <- function(loc, date, tz, angle = 6,
+sun_times <- function(loc, date, angle = 6,
                       interval = "none", type = "riseset") {
-  if(class(loc) == "numeric") loc <- matrix(loc, nrow = 1)
-  if(class(loc) %in% c("data.frame", "matrix")) loc <- as.matrix(loc)
 
-  date1 <- as.POSIXct(as.character(date), tz = tz)
+  if(class(loc) == "numeric"){
+    loc <- matrix(loc, nrow = 1)
+  } else if(class(loc) == "data.frame") {
+    loc <- as.matrix(loc)
+  }
+
+  date1 <- lubridate::as_datetime(date)
   if(interval == "night") date2 <- date1 - lubridate::days(1) else date2 <- date1
 
   if(type == "riseset") {
@@ -233,25 +254,32 @@ sun_times <- function(loc, date, tz, angle = 6,
                                    solarDep = angle, POSIXct.out = TRUE)$time
   }
 
-  if(interval == "none") s <- data.frame(sunrise = sunrise, sunset = sunset)
+  # Get the times as offset times
+  tz_offset <- tz_offset(loc[1], loc[2])
+  sunrise <- sunrise + lubridate::hours(tz_offset)
+  sunset <- sunset + lubridate::hours(tz_offset)
+
+  if(interval == "none") s <- data.frame(sunrise = sunrise,
+                                         sunset = sunset,
+                                         offset_applied = tz_offset)
   if(interval == "day") s <- lubridate::interval(sunrise, sunset)
   if(interval == "night") s <- lubridate::interval(sunset, sunrise)
   s
 }
 
-sun_local <- function(loc, date, tz, type = "dawndusk", angle = 12) {
+sun_local <- function(loc, date, type = "dawndusk", angle = 12) {
 
-  temp <- sun_times(loc = c(loc[1], loc[2]), date = date,
-                    tz = tz, type = type, angle = angle) %>%
+  sun_times(loc = c(loc[1], loc[2]), date = date,
+            type = type, angle = angle) %>%
     dplyr::mutate(
-      date = date,
-      sunrise = replace(.data$sunrise, is.na(.data$sunrise),
-                        lubridate::force_tz(
-                          lubridate::as_datetime(.data$date[is.na(.data$sunrise)]), tz)),
-      sunset = replace(.data$sunset,
-                       is.na(.data$sunset),
-                       lubridate::force_tz(
-                         lubridate::as_datetime(.data$date[is.na(.data$sunset)]), tz) +
-                         lubridate::hours(23) + lubridate::minutes(59) +
-                         lubridate::seconds(59)))
+      date = !!date,
+      sunrise = dplyr::if_else(is.na(.data$sunrise),
+                               lubridate::as_datetime(.data$date),
+                               .data$sunrise),
+      sunset = dplyr::if_else(is.na(.data$sunset),
+                              lubridate::as_datetime(.data$date) +
+                                lubridate::hours(23) +
+                                lubridate::minutes(59) +
+                                lubridate::seconds(59),
+                              .data$sunset))
 }
