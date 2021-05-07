@@ -108,7 +108,7 @@ sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
     dplyr::mutate(df = purrr::map(.data$forward,
                                   ~data.frame(y = .x, x = 1:length(.x))),
                   model = purrr::map(.data$df, ~stats::lm(y ~ poly(x, 3), data = .x)),
-                  coef = purrr::map(.data$model, ~broom::glance(.x)),
+                  coef = purrr::map(.data$model, ~suppressWarnings(broom::glance(.x))),
                   dir = purrr::map_dbl(.data$model, ~stats::coef(.x)[2]))
 
   if(nrow(s) > 0) {
