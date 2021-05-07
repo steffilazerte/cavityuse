@@ -169,7 +169,8 @@ points_sun_times <- function(data, sun,
                       .data$light <= thresh_dark ~ "in",
                       .data$light >= ambig_light ~ "out_ambig",
                       .data$light <= ambig_dark ~ "in_ambig",
-                      TRUE ~ "ambig"))
+                      TRUE ~ "ambig")) %>%
+      dplyr::arrange(time)
   }
 }
 
