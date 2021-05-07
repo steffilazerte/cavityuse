@@ -4,8 +4,17 @@
 \alias{cavity_detect}
 \title{Summarize light into bouts of cavity use}
 \usage{
-cavity_detect(data, sun, loc = NULL, n = 2, thresh_dark = 1,
-  thresh_light = 60, ambig_dark = 10, ambig_light = 25, gap_cutoff = 10)
+cavity_detect(
+  data,
+  sun = NULL,
+  loc = NULL,
+  n = 2,
+  thresh_dark = 1,
+  thresh_light = 60,
+  ambig_dark = 10,
+  ambig_light = 25,
+  gap_cutoff = 10
+)
 }
 \arguments{
 \item{data}{Data frame. Raw light data. Requires two columns: "time" and

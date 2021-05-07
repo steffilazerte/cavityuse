@@ -24,7 +24,7 @@ There are two main aspects of this package:
     the time frame you're interested in (i.e., midnight, noon, sunrise/sunset)
     }
 
-\item Plot patterns of cavity use
+ \item Plot patterns of cavity use
  \itemize{
    \item \code{\link{cavity_plot}()}
    }
@@ -32,7 +32,7 @@ There are two main aspects of this package:
 
 We also include several practice data sets:
 
-\itemize{
+ \itemize{
    \item \code{\link{flicker}}
    \item \code{\link{flicker_mult}}
    \item \code{\link{wtsp}}

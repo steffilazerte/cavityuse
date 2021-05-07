@@ -10,3 +10,4 @@
 ^codemeta\.json$
 ^_pkgdown.yml$
 ^docs$
+^DEV_TESTS.R$

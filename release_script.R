@@ -23,6 +23,7 @@ system(paste0("cd ..; R CMD check cavityuse_",
 
 ## Update codemeta
 codemetar::write_codemeta()
+codemetar::give_opinions()
 
 ## Documentation
 # Update NEWS

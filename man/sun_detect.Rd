@@ -4,8 +4,15 @@
 \alias{sun_detect}
 \title{Detect patterns of sunrise and sunset}
 \usage{
-sun_detect(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
-  local = TRUE, filter_problems = TRUE)
+sun_detect(
+  data,
+  n = 10,
+  range = 10,
+  cutoff = 0.95,
+  loc = NULL,
+  local = TRUE,
+  filter_problems = TRUE
+)
 }
 \arguments{
 \item{data}{Data frame. Raw light data. Requires two columns: "time" and

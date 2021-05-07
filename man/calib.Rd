@@ -4,7 +4,8 @@
 \name{calib}
 \alias{calib}
 \title{Geolocator data recording sunrise and sunset}
-\format{A data frame with 2,160 rows and 5 variables:
+\format{
+A data frame with 2,160 rows and 5 variables:
 \describe{
   \item{lon}{Longitude}
   \item{lat}{Latitude}
@@ -12,7 +13,8 @@
   \item{time}{Time of the measurement}
   \item{light}{Maximum light levels (lux) detected within the last two
   minutes}
-}}
+}
+}
 \source{
 \url{https://doi.org/10.1111/ibi.12206}
 }

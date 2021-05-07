@@ -29,4 +29,4 @@ Imports:
     tidyr (>= 0.4.1)
 Suggests: testthat,
     covr
-RoxygenNote: 6.0.1
+RoxygenNote: 7.1.1

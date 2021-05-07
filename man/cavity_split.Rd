@@ -4,8 +4,12 @@
 \alias{cavity_split}
 \title{Split cavity use data by different time frames}
 \usage{
-cavity_split(cavity, split = c("midnight", "midday", "riseset"), sun = NULL,
-  loc = NULL)
+cavity_split(
+  cavity,
+  split = c("midnight", "midday", "riseset"),
+  sun = NULL,
+  loc = NULL
+)
 }
 \arguments{
 \item{cavity}{Data frame. Bouts of cavity use, output from

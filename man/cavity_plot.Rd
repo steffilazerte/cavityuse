@@ -4,9 +4,18 @@
 \alias{cavity_plot}
 \title{Plot light data}
 \usage{
-cavity_plot(data, cavity = NULL, sun = NULL, loc = NULL, days = 10,
-  start = NULL, nrow = NULL, ncol = NULL, clip = TRUE,
-  show_night = TRUE)
+cavity_plot(
+  data,
+  cavity = NULL,
+  sun = NULL,
+  loc = NULL,
+  days = 10,
+  start = NULL,
+  nrow = NULL,
+  ncol = NULL,
+  clip = TRUE,
+  show_night = TRUE
+)
 }
 \arguments{
 \item{data}{Data frame. Raw light data. Requires two columns: "time" and
