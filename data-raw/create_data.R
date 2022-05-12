@@ -14,8 +14,7 @@
 
 library(tidyverse)
 
-light_data <- read_csv("./data-raw/examples_raw.csv", guess_max = 15000,
-                       locale = locale(tz = "Etc/GMT+8"))
+light_data <- read_csv("./data-raw/examples_raw.csv", guess_max = 15000)
 
 calib <- filter(light_data, id == "flicker_a") %>%
   select(-id)
@@ -26,7 +25,7 @@ flicker <- filter(flicker_mult, id == "flicker_c")
 
 wtsp <- filter(light_data, str_detect(id, "wtsp"))
 
-devtools::use_data(calib, overwrite = TRUE)
-devtools::use_data(flicker_mult, overwrite = TRUE)
-devtools::use_data(flicker, overwrite = TRUE)
-devtools::use_data(wtsp, overwrite = TRUE)
+usethis::use_data(calib, overwrite = TRUE)
+usethis::use_data(flicker_mult, overwrite = TRUE)
+usethis::use_data(flicker, overwrite = TRUE)
+usethis::use_data(wtsp, overwrite = TRUE)

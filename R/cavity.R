@@ -147,12 +147,13 @@ points_sun_times <- function(data, sun,
                        na.rm = TRUE)
 
     n_sun <- sun$n[1]
+
     data <- sun %>%
       dplyr::select(-.data$n, -.data$n_range) %>%
       tidyr::complete(dir = c("sunrise", "sunset"),
                       fill = list(date = NA, time = NA, dur = NA)) %>%
-      tidyr::spread(.data$dir, .data$time) %>%
-      dplyr::right_join(data, by = "date") %>%
+      tidyr::pivot_wider(names_from = .data$dir, values_from = .data$time) %>%
+      dplyr::right_join(data, by = c("date", "offset_applied")) %>%
       # Note which cavity bouts are during a detected sunrise/sunset
       dplyr::mutate(sunrise_end = .data$sunrise + (i * lubridate::minutes(n_sun)),
                     sunset_end = .data$sunset + (i * lubridate::minutes(n_sun)),

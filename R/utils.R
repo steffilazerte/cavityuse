@@ -42,11 +42,12 @@ check_date <- function(x) {
   x
 }
 
-check_data <- function(data) {
+check_data <- function(data, min_rows = TRUE) {
   if(!is.data.frame(data)) stop(deparse(substitute(data)),
                                 " must be a data frame", call. = FALSE)
-  if(nrow(data) == 0) stop(deparse(substitute(data)),
-                           " must have more than 0 rows of data", call. = FALSE)
+  if(min_rows && nrow(data) == 0) stop(deparse(substitute(data)),
+                                       " must have more than 0 rows of data",
+                                       call. = FALSE)
 
   n <- dplyr::if_else(nrow(data) > 60000, 60000L, nrow(data))
   if(any(dplyr::count(data[1:n,], .data$time)$n > 1)) {
