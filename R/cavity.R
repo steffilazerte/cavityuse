@@ -143,10 +143,10 @@ points_sun_times <- function(data, sun,
   } else {
 
     i <- stats::median(as.numeric(difftime(dplyr::lead(data$time),
-                                           data$time, units = "min")),
+                                           data$time, units = "secs")),
                        na.rm = TRUE)
 
-    n_sun <- sun$n[1]
+    n_sun <- sun$n[1] * 60
 
     data <- sun %>%
       dplyr::select(-.data$n, -.data$n_range) %>%
@@ -155,8 +155,8 @@ points_sun_times <- function(data, sun,
       tidyr::pivot_wider(names_from = .data$dir, values_from = .data$time) %>%
       dplyr::right_join(data, by = c("date", "offset_applied")) %>%
       # Note which cavity bouts are during a detected sunrise/sunset
-      dplyr::mutate(sunrise_end = .data$sunrise + (i * lubridate::minutes(n_sun)),
-                    sunset_end = .data$sunset + (i * lubridate::minutes(n_sun)),
+      dplyr::mutate(sunrise_end = .data$sunrise + (i * lubridate::seconds(n_sun)),
+                    sunset_end = .data$sunset + (i * lubridate::seconds(n_sun)),
                     point_type = dplyr::case_when(
                       .data$time >= .data$sunrise &
                         .data$time <= .data$sunrise_end ~ "sunrise",
