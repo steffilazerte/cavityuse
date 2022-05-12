@@ -32,7 +32,7 @@ test_that("check_time", {
 })
 
 
-test_that("tz_offset", {
+test_that("tz_find_offset", {
 
 })
 

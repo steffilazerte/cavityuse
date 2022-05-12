@@ -78,7 +78,6 @@ cavity_detect <- function(data, sun = NULL, loc = NULL, n = 2,
                           thresh_dark = 1, thresh_light = 60,
                           ambig_dark = 10, ambig_light = 25,
                           gap_cutoff = 10) {
-
   # Input Checks
   check_data(data)
   check_cols(data, c("time", "light"))
@@ -87,46 +86,45 @@ cavity_detect <- function(data, sun = NULL, loc = NULL, n = 2,
   check_time(data$time)
 
   loc <- check_loc(data, loc)
-  tz_offset <- tz_offset(loc[1], loc[2])
+  tz_offset <- tz_find_offset(loc[1], loc[2])
   data <- tz_apply_offset(data, tz_offset)
   data <- check_date(data)
 
-  if(!is.null(sun)) {
-    check_data(sun)
-    check_cols(sun, c("time", "dir", "n_range", "n", "dur"))
+  if(!is.null(sun)) check_data(sun, min_rows = FALSE)
+  if(!is.null(sun) && nrow(sun) > 0) {
+    check_cols(sun, c("time", "dir", "n_range", "n", "dur", "offset_applied"))
     check_time(sun$time)
     sun <- check_date(sun)
   } else {
-    sun <- dplyr::select(data, date, time, light) %>%
+    sun <- dplyr::select(data, date, time, light, offset_applied) %>%
       dplyr::filter(is.na(light)) %>%
-      dplyr::mutate(dir = as.character(NA), n_range = as.numeric(NA),
-                    n = as.integer(NA), dur = as.numeric(NA))
+      dplyr::mutate(dir = NA_character_, n_range = NA_real_,
+                    n = NA_integer_, dur = NA_real_)
   }
 
   # Ungoup
   if(dplyr::is.grouped_df(data)) data <- dplyr::ungroup(data)
   if(dplyr::is.grouped_df(sun)) sun <- dplyr::ungroup(sun)
 
+  # Sort
+  data <- dplyr::arrange(data, .data$time)
 
   data <- points_sun_times(data, sun = sun,
                            thresh_dark, thresh_light,
                            ambig_dark, ambig_light)
 
-  cavity <- cavity_assign(data, n)
-  cavity <- cavity_simplify(cavity, gap_cutoff = gap_cutoff)
-  cavity <- cavity_spread(cavity)
-  cavity <- cavity_fix(cavity, loc = loc, gap_cutoff = gap_cutoff)
-  cavity <- cavity_finalize(cavity)
-
-  cavity <- cavity_split(cavity)
-
-  # Add run details
-  dplyr::mutate(cavity,
-                lon = loc[['lon']], lat = loc[['lat']],
-                thresh_dark = thresh_dark,
-                thresh_light = thresh_light,
-                ambig_dark = ambig_dark,
-                ambig_light = ambig_light)
+  cavity_assign(data, n) %>%
+    cavity_simplify(gap_cutoff = gap_cutoff) %>%
+    cavity_spread() %>%
+    cavity_fix(loc = loc, gap_cutoff = gap_cutoff) %>%
+    cavity_finalize() %>%
+    cavity_split() %>%
+    # Add run details
+    dplyr::mutate(lon = loc[['lon']], lat = loc[['lat']],
+                  thresh_dark = thresh_dark,
+                  thresh_light = thresh_light,
+                  ambig_dark = ambig_dark,
+                  ambig_light = ambig_light)
 }
 
 

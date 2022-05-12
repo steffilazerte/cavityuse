@@ -82,7 +82,7 @@ Consider using the [`lubridate`](https://lubridate.tidyverse.org/) package to fo
 
 Although most geolocator data is in the UTC timezone, to more efficiently detect sunrise/sunset times, your data should be in the timezone of your location (non-daylight savings).
  
-You can use the `tz_offset` function to determine what timezone this would be, and the `with_tz` function from the lubridate package to assign this timezone to your data:
+You can use the `tz_find_offset` function to determine what timezone this would be, and the `with_tz` function from the lubridate package to assign this timezone to your data:
 
 ```{r}
 tz_offset("America/Vancouver")

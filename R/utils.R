@@ -101,8 +101,8 @@ check_tz <- function(tz) {
   tz
 }
 
-
-tz_offset <- function(lon, lat) {
+#' @export
+tz_find_offset <- function(lon, lat) {
   lutz::tz_lookup_coords(lat[1], lon[1], method = "accurate") %>%
     lutz::tz_offset(lubridate::ymd("2020-01-01"), .) %>%
     dplyr::pull(.data$utc_offset_h)
@@ -116,15 +116,39 @@ is_dst <- function(tz) {
  if(lubridate::hour(t1) != lubridate::hour(t2)) TRUE else FALSE
 }
 
-tz_apply_offset <- function(data, tz_offset) {
-  dplyr::mutate(data,
-                time = time + lubridate::hours(tz_offset),
-                offset_applied = tz_offset)
+
+#' @export
+tz_apply_offset <- function(data, tz_offset, cols = "time") {
+  if("offset_applied" %in% names(data) && all(data$offset_applied != 0)) {
+    message("Removing previously assigned tz offset...")
+    data <- tz_remove_offset(data)
+  }
+  if(any(!cols %in% names(data))) {
+    stop("Cannot add tz offset: 'cols' not in data", call. = FALSE)
+  }
+
+  for(col in cols) {
+    data <- dplyr::mutate(data,
+                          !!col := .data[[col]] + lubridate::hours(!!tz_offset),
+                          offset_applied = !!tz_offset)
+  }
+  data
 }
 
-tz_remove_offset <- function(data, tz_offset) {
-  dplyr::mutate(data,
-                time = time - lubridate::hours(tz_offset),
-                offset_applied = 0)
-}
+#' @export
+tz_remove_offset <- function(data, cols = "time") {
+  if(!"offset_applied" %in% names(data)) {
+    stop("Cannot remove tz offset: No offset applied", call. = FALSE)
+  } else if(length(unique(data$offset_applied)) > 1) {
+    stop("Cannot remove tz offset: More than one offset detected in the data...",
+         call. = FALSE)
+  } else if(any(!cols %in% names(data))) {
+    stop("Cannot remove tz offset: 'cols' not in data", call. = FALSE)
+  }
 
+  for(col in cols) {
+    data <- dplyr::mutate(data,
+                          !!col := .data[[col]] - lubridate::hours(.data$offset_applied))
+  }
+  dplyr::mutate(data, offset_applied = 0)
+}

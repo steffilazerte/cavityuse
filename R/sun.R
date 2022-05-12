@@ -59,7 +59,7 @@ sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
   check_time(data$time)
   loc <- check_loc(data, loc)
 
-  tz_offset <- tz_offset(loc[1], loc[2])
+  tz_offset <- tz_find_offset(loc[1], loc[2])
   data <- tz_apply_offset(data, tz_offset)
 
   data <- check_date(data)
@@ -135,19 +135,27 @@ sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
                        dplyr::desc(.data$adj.r.squared),
                        .data$statistic, .data$p.value) %>%
         dplyr::slice(1) %>%
-        dplyr::select(.data$date, .data$time, .data$dir,
-                      .data$n_range, .data$n, .data$dur,
-                      .data$offset_applied) %>%
         dplyr::ungroup()
     }
+
+    s <- dplyr::select(s, .data$date, .data$time, .data$dir,
+                       .data$n_range, .data$n, .data$dur,
+                       .data$offset_applied)
 
     # Expect to start or end in dark/light (but not necessarily?)
     # Expect to vary by at least X levels of light
 
     # If light activity before sunrise or after sunset, not a true sunrise/set detection
     if(filter_problems && nrow(s) > 0) s <- sun_filter(data, s)
-  } else s <- dplyr::select(s, .data$date, .data$time, .data$dir,
-                            .data$n_range, .data$n, .data$offset_applied)
+  } else {
+    s <- dplyr::tibble(date = lubridate::as_date(NA),
+                       time = lubridate::as_datetime(NA),
+                       dir = NA_character_,
+                       n_range = NA_real_,
+                       n = NA_integer_,
+                       dur = NA_real_,
+                       offset_applied = NA, .rows = 0)
+  }
 
   s
 }
@@ -255,7 +263,7 @@ sun_times <- function(loc, date, angle = 6,
   }
 
   # Get the times as offset times
-  tz_offset <- tz_offset(loc[1], loc[2])
+  tz_offset <- tz_find_offset(loc[1], loc[2])
   sunrise <- sunrise + lubridate::hours(tz_offset)
   sunset <- sunset + lubridate::hours(tz_offset)
 

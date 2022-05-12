@@ -14,6 +14,8 @@
 #'   = TRUE}).
 #' @param days Numeric. Number of days to plot
 #' @param start Character. Start date in "YYYY-MM-DD" format
+#' @param tz_apply_offset Logical. Apply a timezone offset to indicate local
+#'   time on the x-axis. Only relevant if plotting light data alone.
 #' @param nrow Numeric. For multi-day figures, number of plot rows.
 #' @param ncol Numeric. For multi-day figures, number of plot cols.
 #' @param clip Logical. For geolocator light data >64 lux, clip the data to a
@@ -29,6 +31,9 @@
 #'
 #' # Light data only
 #' cavity_plot(flicker, days = 1)
+#'
+#' # Don't offset time to show local (i.e. leave as UTC)
+#' cavity_plot(flicker, days = 4, tz_apply_offset = FALSE)
 #'
 #' # Light data + sunrise/sunset
 #' s <- sun_detect(flicker)
@@ -56,7 +61,7 @@
 #'
 
 cavity_plot <- function(data, cavity = NULL, sun = NULL, loc = NULL,
-                        days = 10, start = NULL,
+                        days = 10, start = NULL, tz_apply_offset = TRUE,
                         nrow = NULL, ncol = NULL, clip = TRUE,
                         show_night = TRUE) {
 
@@ -66,14 +71,10 @@ cavity_plot <- function(data, cavity = NULL, sun = NULL, loc = NULL,
 
   check_time(data$time)
 
-  ## Offset data if cavity, sun or loc available
-  if(!is.null(cavity) && cavity$offset_applied != 0) {
-    data <- tz_apply_offset(data, cavity$offset_applied[1])
-  } else if(!is.null(sun) && sun$offset_applied != 0) {
-    data <- tz_apply_offset(data, cavity$offset_applied[1])
-  } else if(!is.null(loc)) {
-    loc <- check_loc(data, loc)
-    tz_offset <- tz_offset(loc[1], loc[2])
+  loc <- check_loc(data, loc)
+
+  tz_offset <- tz_find_offset(loc[1], loc[2])
+  if(!is.null(cavity) | !is.null(sun) | tz_apply_offset) {
     data <- tz_apply_offset(data, tz_offset)
   }
 
@@ -157,7 +158,7 @@ cavity_plot <- function(data, cavity = NULL, sun = NULL, loc = NULL,
     ggplot2::geom_line(ggplot2::aes_string(x = "time", y = "light")) +
     ggplot2::geom_point(ggplot2::aes_string(x = "time", y = "light")) +
     ggplot2::facet_wrap(~ date, scales = "free_x", nrow = nrow, ncol = ncol) +
-    ggplot2::scale_x_datetime(date_labels = "%H:%M") +
+    ggplot2::scale_x_datetime(date_labels = "%H:%M", limits = date_limits) +
     ggplot2::labs(x = "Time", y = "Light levels", fill = "Location")
 
   if(show_night) {
@@ -167,6 +168,20 @@ cavity_plot <- function(data, cavity = NULL, sun = NULL, loc = NULL,
       dplyr::mutate(rise_null = lubridate::floor_date(.data$sunrise, "days"),
                     set_null = lubridate::ceiling_date(.data$sunset, "days"),
                     date = lubridate::as_date(.data$rise_null))
+    if(!tz_apply_offset) {
+      sun_t <- tz_remove_offset(sun_t, cols = c("sunrise", "sunset")) %>%
+        mutate(rise_null = dplyr::if_else((lubridate::hour(sunset) + 12) < 24,
+                                          sunset - lubridate::days(1),
+                                          rise_null),
+               sunset = dplyr::if_else(
+                 lubridate::as_date(sunset) > lubridate::as_date(sunrise),
+                 lubridate::floor_date(sunset, unit = "day"),
+                 sunset),
+               set_null = dplyr::if_else((lubridate::hour(sunrise) - 12) > 0,
+                                         sunrise,
+                                         set_null))
+    }
+
     g <- g +
       ggplot2::geom_rect(data = sun_t,
                          ggplot2::aes_string(xmin = "rise_null",
@@ -180,5 +195,11 @@ cavity_plot <- function(data, cavity = NULL, sun = NULL, loc = NULL,
                          alpha = 0.2, inherit.aes = FALSE)
   }
   g
+}
+
+
+date_limits <- function(limits) {
+  c(lubridate::floor_date(limits[1], unit = "day"),
+    lubridate::ceiling_date(limits[2], unit = "day"))
 }
 
