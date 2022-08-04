@@ -1,0 +1,15 @@
+citHeader("To cite cavityuse in publications use:")
+
+citEntry(
+  entry    = "Manual",
+  title    = "cavityuse: Detecting Cavity Use From Geolocator Data",
+  author   = "Stefanie E. LaZerte",
+  year     = 2022,
+  note     = paste("R package version ", packageVersion("cavityuse")),
+  url      = "http://github.com/steffilazerte/cavityuse",
+  textVersion = paste(
+    "LaZerte S (2022). ",
+    "_cavityuse: Detecting Cavity Use From Geolocator Data_. ",
+    "R package version ", packageVersion("cavityuse"),
+    "<http://github.com/steffilazerte/cavityuse>")
+)
