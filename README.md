@@ -41,12 +41,13 @@ library(cavityuse)
     ## Please note that 'cavityuse' is still in early development
     ## Help by submitting bugs/feature requests: http://github.com/steffilazerte/cavityuse/issues
 
-We’ll get started with the built in example file `flicker`
+We’ll get started with the built in example file `calib` which clearly
+shows sunrise/sunset events
 
 Let’s take a look at the patterns in the raw data:
 
 ``` r
-cavity_plot(flicker)
+cavity_plot(calib)
 ```
 
 <img src="man/figures/unnamed-chunk-4-1.png" width="100%" />
@@ -54,26 +55,38 @@ cavity_plot(flicker)
 Look for any sunrise/sunset events in your geolocator data
 
 ``` r
-s <- sun_detect(flicker)
+s <- sun_detect(calib)
 s
 ```
 
-    ## # A tibble: 0 × 7
-    ## # … with 7 variables: date <date>, time <dttm>, dir <chr>, n_range <dbl>,
-    ## #   n <int>, dur <dbl>, offset_applied <lgl>
+    ## # A tibble: 6 × 7
+    ##   date       time                dir     n_range     n   dur offset_applied
+    ##   <date>     <dttm>              <chr>     <dbl> <int> <int>          <dbl>
+    ## 1 2011-05-07 2011-05-07 03:45:57 sunrise      24    10    20             -8
+    ## 2 2011-05-07 2011-05-07 20:07:57 sunset       32    10    20             -8
+    ## 3 2011-05-08 2011-05-08 03:47:57 sunrise      63    10    20             -8
+    ## 4 2011-05-08 2011-05-08 20:09:57 sunset       62    10    20             -8
+    ## 5 2011-05-09 2011-05-09 03:39:56 sunrise      32    10    20             -8
+    ## 6 2011-05-09 2011-05-09 20:11:56 sunset       62    10    20             -8
 
 Let’s see what these look like
 
 ``` r
-cavity_plot(data = flicker, sun = s, start = "2011-06-17", days = 1)
+cavity_plot(data = calib, sun = s, days = 1)
 ```
 
 <img src="man/figures/unnamed-chunk-6-1.png" width="100%" />
 
-Using these detected times, assign the rest of the light data to bouts
-of cavity use:
+Now let’s move on to the `flicker` data set:
 
 ``` r
+cavity_plot(flicker)
+```
+
+<img src="man/figures/unnamed-chunk-7-1.png" width="100%" />
+
+``` r
+s <- sun_detect(flicker) # Nothing detected
 e <- cavity_detect(flicker, sun = s)
 e
 ```
@@ -98,7 +111,7 @@ e
 Let’s see how these assignments match the patterns we see
 
 ``` r
-cavity_plot(data = flicker, cavity = e, sun = s)
+cavity_plot(data = flicker, cavity = e)
 ```
 
 <img src="man/figures/unnamed-chunk-8-1.png" width="100%" />

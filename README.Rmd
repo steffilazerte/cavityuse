@@ -35,27 +35,30 @@ Load the package
 library(cavityuse)
 ```
 
-We'll get started with the built in example file `flicker`
+We'll get started with the built in example file `calib` which clearly shows
+sunrise/sunset events
 
 Let's take a look at the patterns in the raw data:
 ```{r}
-cavity_plot(flicker)
+cavity_plot(calib)
 ```
 
 Look for any sunrise/sunset events in your geolocator data
 ```{r}
-s <- sun_detect(flicker)
+s <- sun_detect(calib)
 s
 ```
 
 Let's see what these look like
 ```{r}
-cavity_plot(data = flicker, sun = s, start = "2011-06-17", days = 1)
+cavity_plot(data = calib, sun = s, days = 1)
 ```
 
-Using these detected times, assign the rest of the light data to bouts of cavity use:
+Now let's move on to the `flicker` data set:
 
 ```{r}
+cavity_plot(flicker)
+s <- sun_detect(flicker) # Nothing detected
 e <- cavity_detect(flicker, sun = s)
 e
 ```
@@ -63,7 +66,7 @@ e
 Let's see how these assignments match the patterns we see
 
 ```{r}
-cavity_plot(data = flicker, cavity = e, sun = s)
+cavity_plot(data = flicker, cavity = e)
 ```
 
 
