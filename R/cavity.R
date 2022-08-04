@@ -59,7 +59,7 @@
 #'
 #' cavity_plot(wtsp, cavity = e, sun = s)
 #'
-#' # Use map from purrr package for multiple individuals
+#' # Use `map` from purrr package for multiple individuals
 #' library(dplyr)
 #' library(tidyr)
 #' library(purrr)
@@ -78,55 +78,54 @@ cavity_detect <- function(data, sun = NULL, loc = NULL, n = 2,
                           thresh_dark = 1, thresh_light = 60,
                           ambig_dark = 10, ambig_light = 25,
                           gap_cutoff = 10) {
-
   # Input Checks
   check_data(data)
   check_cols(data, c("time", "light"))
-  check_time(data$time)
-  data <- check_date(data)
   check_class(data$light, "numeric")
 
-  if(!is.null(sun)) {
-    check_data(sun)
-    check_cols(sun, c("time", "dir", "n_range", "n", "dur"))
+  check_time(data$time)
+
+  loc <- check_loc(data, loc)
+  tz_offset <- tz_find_offset(loc[1], loc[2])
+  data <- tz_apply_offset(data, tz_offset)
+  data <- check_date(data)
+
+  if(!is.null(sun)) check_data(sun, min_rows = FALSE)
+  if(!is.null(sun) && nrow(sun) > 0) {
+    check_cols(sun, c("time", "dir", "n_range", "n", "dur", "offset_applied"))
     check_time(sun$time)
     sun <- check_date(sun)
   } else {
-    sun <- dplyr::select(data, date, time, light) %>%
-      dplyr::filter(is.na(light)) %>%
-      dplyr::mutate(dir = as.character(NA), n_range = as.numeric(NA),
-                    n = as.integer(NA), dur = as.numeric(NA))
+    sun <- dplyr::tibble(date = lubridate::NA_Date_,
+                         time = lubridate::NA_POSIXct_,
+                         dir = NA_character_, n_range = NA_real_,
+                         n = NA_integer_, dur = NA_real_,
+                         offset_applied = NA_real_, .rows = 0)
   }
-
-  loc <- check_loc(data, loc)
-
 
   # Ungoup
   if(dplyr::is.grouped_df(data)) data <- dplyr::ungroup(data)
   if(dplyr::is.grouped_df(sun)) sun <- dplyr::ungroup(sun)
 
+  # Sort
+  data <- dplyr::arrange(data, .data$time)
 
   data <- points_sun_times(data, sun = sun,
-                          thresh_dark, thresh_light,
-                          ambig_dark, ambig_light)
+                           thresh_dark, thresh_light,
+                           ambig_dark, ambig_light)
 
-  cavity <- cavity_assign(data, n)
-  cavity <- cavity_simplify(cavity, gap_cutoff = gap_cutoff)
-
-  cavity <- cavity_spread(cavity)
-  cavity <- cavity_fix(cavity, loc = loc, gap_cutoff)
-  cavity <- cavity_finalize(cavity)
-
-  cavity <- cavity_split(cavity)
-
-  # Add run details
-  cavity <- dplyr::mutate(cavity,
-                          thresh_dark = thresh_dark,
-                          thresh_light = thresh_light,
-                          ambig_dark = ambig_dark,
-                          ambig_light = ambig_light)
-
-  cavity
+  cavity_assign(data, n) %>%
+    cavity_simplify(gap_cutoff = gap_cutoff) %>%
+    cavity_spread() %>%
+    cavity_fix(loc = loc, gap_cutoff = gap_cutoff) %>%
+    cavity_finalize() %>%
+    cavity_split() %>%
+    # Add run details
+    dplyr::mutate(lon = loc[['lon']], lat = loc[['lat']],
+                  thresh_dark = thresh_dark,
+                  thresh_light = thresh_light,
+                  ambig_dark = ambig_dark,
+                  ambig_light = ambig_light)
 }
 
 
@@ -144,20 +143,20 @@ points_sun_times <- function(data, sun,
                                        TRUE ~ "ambig"))
   } else {
 
-    i <- stats::median(as.numeric(difftime(dplyr::lead(data$time),
-                                           data$time, units = "min")),
-                       na.rm = TRUE)
+    n_sun <- sun$n[1] # Number of light observations (see ?sun_detect)
 
-    n_sun <- sun$n[1]
+    # Sunrise/set time in seconds
+    i <- res(data$time) * n_sun
+
     data <- sun %>%
       dplyr::select(-.data$n, -.data$n_range) %>%
       tidyr::complete(dir = c("sunrise", "sunset"),
                       fill = list(date = NA, time = NA, dur = NA)) %>%
-      tidyr::spread(.data$dir, .data$time) %>%
-      dplyr::right_join(data, by = "date") %>%
+      tidyr::pivot_wider(names_from = .data$dir, values_from = .data$time) %>%
+      dplyr::right_join(data, by = c("date", "offset_applied")) %>%
       # Note which cavity bouts are during a detected sunrise/sunset
-      dplyr::mutate(sunrise_end = .data$sunrise + (i * lubridate::minutes(n_sun)),
-                    sunset_end = .data$sunset + (i * lubridate::minutes(n_sun)),
+      dplyr::mutate(sunrise_end = .data$sunrise + lubridate::seconds(i),
+                    sunset_end = .data$sunset + lubridate::seconds(i),
                     point_type = dplyr::case_when(
                       .data$time >= .data$sunrise &
                         .data$time <= .data$sunrise_end ~ "sunrise",
@@ -169,7 +168,8 @@ points_sun_times <- function(data, sun,
                       .data$light <= thresh_dark ~ "in",
                       .data$light >= ambig_light ~ "out_ambig",
                       .data$light <= ambig_dark ~ "in_ambig",
-                      TRUE ~ "ambig"))
+                      TRUE ~ "ambig")) %>%
+      dplyr::arrange(.data$time)
   }
 }
 
@@ -251,9 +251,8 @@ cavity_simplify <- function(cavity, gap_cutoff) {
                              .data$location == "ambig",
                            dplyr::lead(.data$location), .data$location))
 
-  cavity <- dplyr::mutate(cavity,
-                          int = as.numeric(difftime(dplyr::lead(.data$time),
-                                                    .data$time, units = "min")))
+  cavity <- dplyr::mutate(cavity, int = res(.data$time) / 60)
+
   # Get overall bout types and times
   cavity <- dplyr::mutate(cavity, type = dplyr::case_when(
     # Single point of a given type
@@ -332,7 +331,7 @@ cavity_spread <- function(cavity) {
 cavity_fix <- function(cavity, loc, gap_cutoff) {
   sun_local <- sun_local(loc = loc,
                          date = unique(lubridate::as_date(cavity$start)),
-                         tz = lubridate::tz(cavity$start), angle = 6)
+                         angle = 6)
 
   # If
   # - A location is "in"
@@ -345,7 +344,7 @@ cavity_fix <- function(cavity, loc, gap_cutoff) {
   # - A location is "in"
   # - and ends after sunset
   # - and occurs right before a "night" location
-  # chagne to "ambig"
+  # change to "ambig"
   # change next to "ambig"
 
 
@@ -384,6 +383,6 @@ cavity_finalize <- function(cavity) {
                   length_hrs = as.numeric(difftime(.data$end, .data$start,
                                                    units = "hours"))) %>%
     dplyr::select(.data$date, .data$start, .data$end,
-                  .data$length_hrs, .data$location) %>%
+                  .data$length_hrs, .data$location, .data$offset_applied) %>%
     dplyr::arrange(.data$start)
 }

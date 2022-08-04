@@ -14,6 +14,8 @@
 #'   = TRUE}).
 #' @param days Numeric. Number of days to plot
 #' @param start Character. Start date in "YYYY-MM-DD" format
+#' @param tz_apply_offset Logical. Apply a timezone offset to indicate local
+#'   time on the x-axis. Only relevant if plotting light data alone.
 #' @param nrow Numeric. For multi-day figures, number of plot rows.
 #' @param ncol Numeric. For multi-day figures, number of plot cols.
 #' @param clip Logical. For geolocator light data >64 lux, clip the data to a
@@ -29,6 +31,9 @@
 #'
 #' # Light data only
 #' cavity_plot(flicker, days = 1)
+#'
+#' # Don't offset time to show local (i.e. leave as UTC)
+#' cavity_plot(flicker, days = 4, tz_apply_offset = FALSE)
 #'
 #' # Light data + sunrise/sunset
 #' s <- sun_detect(flicker)
@@ -56,34 +61,42 @@
 #'
 
 cavity_plot <- function(data, cavity = NULL, sun = NULL, loc = NULL,
-                        days = 10, start = NULL,
+                        days = 10, start = NULL, tz_apply_offset = TRUE,
                         nrow = NULL, ncol = NULL, clip = TRUE,
                         show_night = TRUE) {
 
-  tz <- lubridate::tz(data$time)
+  check_data(data)
+  check_cols(data, c("time", "light"))
+  check_class(data$light, "numeric")
 
-  if(is.null(start)) {
-    start_plot <- min(data$time)
-  } else {
-    start_plot <- as.POSIXct(start, tz = tz)
+  check_time(data$time)
+
+  loc <- check_loc(data, loc)
+
+  tz_offset <- tz_find_offset(loc[1], loc[2])
+  if(!is.null(cavity) | !is.null(sun) | tz_apply_offset) {
+    data <- tz_apply_offset(data, tz_offset)
   }
 
-  start_plot <- lubridate::force_tz(start_plot, tz = tz)
-  start_plot <- lubridate::floor_date(start_plot, unit = "days")
-
-  data$time <- lubridate::with_tz(data$time, tz = tz)
+  if(is.null(start)) {
+    start_plot <- lubridate::floor_date(min(data$time), unit = "days")
+  } else {
+    start_plot <- lubridate::as_date(start)
+  }
 
   if(clip) data$light[data$light > 64] <- 64
 
-  i <- difftime(dplyr::lead(data$time), data$time, units = "sec") %>%
-    stats::median(., na.rm = TRUE) %>%
-    as.numeric(.)/2
+  i <- res(data$time)/2
 
   data <- dplyr::filter(data, .data$time >= start_plot,
                         .data$time < start_plot + lubridate::days(days)) %>%
-    dplyr::mutate(date = lubridate::as_date(.data$time, tz = tz))
+    dplyr::mutate(date = lubridate::as_date(.data$time))
 
-  if(nrow(data) == 0) stop("No data for these dates", call. = FALSE)
+  if(nrow(data) == 0) {
+    message("No data for these dates (",
+            start_plot, " - ", start_plot + lubridate::days(days), ")")
+    return(invisible())
+  }
 
   if(!is.null(cavity)) {
     cavity <- cavity %>%
@@ -143,16 +156,31 @@ cavity_plot <- function(data, cavity = NULL, sun = NULL, loc = NULL,
     ggplot2::geom_line(ggplot2::aes_string(x = "time", y = "light")) +
     ggplot2::geom_point(ggplot2::aes_string(x = "time", y = "light")) +
     ggplot2::facet_wrap(~ date, scales = "free_x", nrow = nrow, ncol = ncol) +
-    ggplot2::scale_x_datetime(date_labels = "%H:%M") +
+    ggplot2::scale_x_datetime(date_labels = "%H:%M", limits = date_limits) +
     ggplot2::labs(x = "Time", y = "Light levels", fill = "Location")
 
-  if(!is.null(tz) & show_night) {
+  if(show_night) {
     loc <- check_loc(data, loc)
-    sun_t <- sun_times(loc = loc, date = unique(data$date), tz = tz,
+    sun_t <- sun_times(loc = loc, date = unique(data$date),
                        type = "dawndusk", angle = 6) %>%
       dplyr::mutate(rise_null = lubridate::floor_date(.data$sunrise, "days"),
                     set_null = lubridate::ceiling_date(.data$sunset, "days"),
                     date = lubridate::as_date(.data$rise_null))
+    if(!tz_apply_offset) {
+      sun_t <- tz_remove_offset(sun_t, cols = c("sunrise", "sunset")) %>%
+        dplyr::mutate(rise_null = dplyr::if_else(
+          (lubridate::hour(.data$sunset) + 12) < 24,
+          .data$sunset - lubridate::days(1),
+          .data$rise_null),
+          sunset = dplyr::if_else(
+            lubridate::as_date(.data$sunset) > lubridate::as_date(.data$sunrise),
+            lubridate::floor_date(.data$sunset, unit = "day"),
+            .data$sunset),
+          set_null = dplyr::if_else((lubridate::hour(.data$sunrise) - 12) > 0,
+                                    .data$sunrise,
+                                    .data$set_null))
+    }
+
     g <- g +
       ggplot2::geom_rect(data = sun_t,
                          ggplot2::aes_string(xmin = "rise_null",
@@ -166,5 +194,11 @@ cavity_plot <- function(data, cavity = NULL, sun = NULL, loc = NULL,
                          alpha = 0.2, inherit.aes = FALSE)
   }
   g
+}
+
+
+date_limits <- function(limits) {
+  c(lubridate::floor_date(limits[1], unit = "day"),
+    lubridate::ceiling_date(limits[2], unit = "day"))
 }
 

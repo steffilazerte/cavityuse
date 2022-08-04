@@ -81,22 +81,38 @@ cavity_split <- function(cavity, split = c("midnight", "midday", "riseset"),
   if(split == "riseset") {
     loc <- check_loc(cavity, loc)
     if(is.null(sun)) {
-      stop("To split cavity bouts by sunrise/sunset need 'sun' data frame",
-           call. = FALSE)
+      message("To split cavity bouts by sunrise/sunset consider using the ",
+              "'sun' data frame for the best precision")
     }
     for(s in c("sunrise", "sunset")) {
       cavity <- cavity_split_one(cavity, s, sun, loc)
       cavity[[paste0("side_", s)]] <- cavity$side
     }
-    cavity <- dplyr::mutate(cavity,
-                            side = dplyr::if_else(.data$side_sunrise ==
-                                                    .data$side_sunset,
-                                                  "night", "day")) %>%
+
+    cavity <- cavity %>%
+      dplyr::mutate(side = dplyr::if_else(
+        .data$side_sunrise == .data$side_sunset, "night", "day")) %>%
       dplyr::select(-.data$side_sunrise, -.data$side_sunset)
+
+    t <- cavity %>%
+      dplyr::select("date", "sunrise", "sunset") %>%
+      dplyr::distinct() %>%
+      dplyr::mutate(
+        day = difftime(.data$sunset, .data$sunrise, units = "hours"),
+        night = difftime(.data$sunrise, .data$date, units = "hours") +
+          difftime(.data$date + lubridate::days(1), .data$sunset, units = "hours"),
+        day = as.numeric(.data$day),
+        night = as.numeric(.data$night)) %>%
+      dplyr::select("date", "day", "night") %>%
+      tidyr::pivot_longer(cols = c("day", "night"), values_to = "side_length",
+                          names_to = "side")
+
+    cavity <- dplyr::left_join(cavity, t, by = c("date", "side"))
+
   } else {
-    cavity <- cavity_split_one(cavity, split)
+    cavity <- cavity_split_one(cavity, split, sun, loc)
     if(split == "midday") {
-      cavity <- dplyr::mutate(cavity, side =
+      cavity <- dplyr::mutate(cavity, date =
                                 dplyr::if_else(.data$side == "before",
                                                .data$date - lubridate::days(1),
                                                .data$date))
@@ -106,9 +122,10 @@ cavity_split <- function(cavity, split = c("midnight", "midday", "riseset"),
   cavity
 }
 
-cavity_split_one <- function(cavity, split, sun = NULL, loc = NULL) {
+cavity_split_one <- function(cavity, split, sun, loc) {
   cavity <- split_calc(cavity, split, sun, loc)
   i <- 0
+
   while(any(cavity$to_split)) {
     i <- i + 1
     #message("Round ", i)
@@ -127,10 +144,14 @@ cavity_split_one <- function(cavity, split, sun = NULL, loc = NULL) {
     cavity <- split_calc(cavity, split, sun, loc)
   }
 
+  if(split %in% c("sunrise", "sunset")) {
+    cavity <- dplyr::rename(cavity, {{split}} := .data$splt)
+  }
+
   dplyr::arrange(cavity, .data$start) %>%
     dplyr::mutate(length_hrs = as.numeric(difftime(.data$end, .data$start,
                                                    units = "hours"))) %>%
-    dplyr::select(-.data$splt, -.data$to_split)
+    dplyr::select(-dplyr::any_of(c("splt", "to_split")))
 
 }
 
@@ -143,20 +164,18 @@ split_calc <- function(cavity, split, sun = NULL, loc = NULL) {
     cavity <- dplyr::mutate(cavity,
                             splt = lubridate::ymd_hms(
                               paste0(.data$date + lubridate::days(1),
-                                     "00:00:00"),
-                              tz = lubridate::tz(.data$start)))
+                                     "00:00:00"), tz = "UTC"))
   } else if(split == "midday") {
     cavity <- dplyr::mutate(cavity,
                             splt = lubridate::ymd_hms(
-                              paste0(.data$date, "12:00:00"),
-                              tz = lubridate::tz(.data$start)))
+                              paste0(.data$date, "12:00:00"), tz = "UTC"))
   } else if(split %in% c("sunrise", "sunset")) {
     # Get rise/set from data if exists
     if(!is.null(sun)) {
       cavity <- dplyr::filter(sun, .data$dir == split) %>%
         dplyr::select(.data$date, splt = .data$time) %>%
         dplyr::right_join(cavity, by = "date")
-    } else cavity$splt <- NA
+    } else cavity$splt <- lubridate::as_datetime(NA)
 
     # Get missing sunrise from sunrise functions
     if(!is.null(loc)) {
@@ -166,14 +185,13 @@ split_calc <- function(cavity, split, sun = NULL, loc = NULL) {
 
       if(nrow(cavity_add) > 0) {
         cavity <- sun_times(loc = loc, date = unique(cavity_add$date),
-                            type = "dawndusk", angle = 6,
-                            tz = lubridate::tz(cavity_add$start))
+                            type = "dawndusk", angle = 6)
         names(cavity)[names(cavity) == split] <- "splt"
       }
 
       cavity <- cavity %>%
         dplyr::mutate(date = lubridate::as_date(.data$splt)) %>%
-        dplyr::select(.data$date, .data$splt) %>%
+        dplyr::select("date", "splt") %>%
         dplyr::right_join(cavity_add, by = "date") %>%
         dplyr::bind_rows(cavity_keep) %>%
         dplyr::arrange(.data$start)

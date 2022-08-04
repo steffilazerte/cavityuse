@@ -4,7 +4,8 @@
 \name{wtsp}
 \alias{wtsp}
 \title{Geolocator data for single white-throated sparrow individual}
-\format{A data frame with 1,152 rows and 6 variables:
+\format{
+A data frame with 1,152 rows and 6 variables:
 \describe{
   \item{id}{Identity of the flicker}
   \item{lon}{Longitude}
@@ -13,7 +14,8 @@
   \item{time}{Time of the measurement}
   \item{light}{Maximum light levels (lux) detected within the last five
   minutes}
-}}
+}
+}
 \source{
 \url{https://doi.org/10.1111/ibi.12206}
 }

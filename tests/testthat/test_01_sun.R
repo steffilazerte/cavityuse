@@ -4,7 +4,7 @@ test_that("sun_detect works as expected", {
   expect_silent(s <- sun_detect(calib))
   expect_is(s, "data.frame")
   expect_equal(nrow(s), 6)
-  expect_equal(ncol(s), 6)
+  expect_named(s, c("date", "time", "dir", "n_range", "n", "dur", "offset_applied"))
 
   expect_equal(s$n[1], 10)
   expect_equal(s$dur[1], 20)
@@ -15,7 +15,7 @@ test_that("sun_detect works as expected", {
                                             "2011-05-08 20:09:57",
                                             "2011-05-09 03:39:56",
                                             "2011-05-09 20:11:56"),
-                                          tz = "Etc/GMT+8"))
+                                          tz = "UTC"))
 
 })
 

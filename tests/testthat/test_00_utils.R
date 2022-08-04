@@ -25,14 +25,14 @@ test_that("check_dst is correct", {
 })
 
 test_that("check_time", {
-  expect_silent(check_time(as.POSIXct("2015-01-01", tz = "Etc/GMT+5")))
-  expect_warning(check_time(as.POSIXct("2015-01-01", tz = "America/Vancouver")))
-  expect_warning(check_time(as.POSIXct("2015-01-01", tz = "UTC")))
+  expect_error(check_time(as.POSIXct("2015-01-01", tz = "Etc/GMT+5")))
+  expect_error(check_time(as.POSIXct("2015-01-01", tz = "America/Vancouver")))
+  expect_silent(check_time(as.POSIXct("2015-01-01", tz = "UTC")))
   expect_error(check_time("2015-01-01 00:00:00"))
 })
 
 
-test_that("tz_offset", {
+test_that("tz_find_offset", {
 
 })
 
