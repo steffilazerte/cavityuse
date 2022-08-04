@@ -16,10 +16,20 @@
 #' @param local Logical. Restrict data to expect windows of sunrise/sunset based
 #'   on coordinates (will speed up the function, but may result in problems if
 #'   sunrise/sunset occur close to midnight)
+#' @param window Numeric. Number of hours around expected sunrise/sunset to
+#'   look for evidence of actual sunrise/sunset. Only applies if `local = TRUE`.
 #' @param filter_problems Logical. Remove problematic sunrise/sunset events?
 #'   Problematic events are defined as those which are preceded/proceeded by
 #'   unexpectedly variable light levels (True sunrise/sunset events should only
 #'   be preceded/proceeded by darkness)
+#' @param thresh_dark Numeric. Light levels below which are considered 'dark'
+#' @param ambig_dark Numeric. Light levels below which are considered 'darkish'
+#' @param poly_order Numeric. Polynomial order for modelling sunrise and sunset.
+#'   For low resolution data (e.g. >=5min intervals), use 2, for higher
+#'   resolution data (e.g., <=2min intervals) use 3. Play with this if
+#'   sunrise/sunsets are consistently missclassified.
+#' @param max_light Numeric. Light levels to consider full brightness. Fixes
+#'   problems with high resolution geolocators that record light into the 1000s
 #'
 #' @details This function looks for sunrise/sunset events by matching \code{n}
 #'   points to a cubic polynomial regression. Events with a high degree of model
@@ -50,11 +60,14 @@
 #'
 #'
 sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
-                       local = TRUE, filter_problems = TRUE) {
+                       local = TRUE, window = 3, filter_problems = TRUE,
+                       thresh_dark = 1, ambig_dark = 10, poly_order = 3,
+                       max_light = 64) {
 
   check_data(data)
   check_cols(data, c("time", "light"))
   check_class(data$light, "numeric")
+  check_class(window, "numeric")
 
   check_time(data$time)
   loc <- check_loc(data, loc)
@@ -69,22 +82,24 @@ sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
   # angle = 6 Civil
   # angle = 12 Nautical
   # angle = 18 Astronomical
-  interval <- stats::median(as.numeric(difftime(data$time,
-                                                dplyr::lag(data$time))),
-                     na.rm = TRUE)
+  interval <- res(data$time)
   s <- data
+
+  s <- dplyr::mutate(s, light = dplyr::if_else(.data$light > .env$max_light,
+                                               .env$max_light, .data$light))
 
   # Confine to actual local sunset/sunrise times
   if(local) {
     sun_local <- sun_local(loc = loc, date = unique(s$date))
+    half_win <- lubridate::minutes(window / 2 * 60)
 
     s <- s %>%
       dplyr::left_join(sun_local, by = c("date", "offset_applied")) %>%
       dplyr::mutate(type = dplyr::case_when(
-        .data$time >= .data$sunrise & .data$time <=
-          .data$sunrise + lubridate::hours(3) ~ "sunrise",
-        .data$time <= .data$sunset & .data$time >=
-          .data$sunset - lubridate::hours(3) ~ "sunset")) %>%
+        .data$time >= .data$sunrise - half_win &
+          .data$time <= .data$sunrise + half_win ~ "sunrise",
+        .data$time <= .data$sunset + half_win &
+          .data$time >= .data$sunset - half_win ~ "sunset")) %>%
       dplyr::filter(!is.na(.data$type)) %>%
       dplyr::select(-.data$sunrise, -.data$sunset)
   }
@@ -94,7 +109,9 @@ sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
     dplyr::mutate(forward = n_lag(.data$light, n, dir = "forward",
                                   return = "list")) %>%
     dplyr::ungroup() %>%
-    dplyr::mutate(n_na = purrr::map_dbl(.data$forward, ~sum(is.na(.x)))) %>%
+    dplyr::mutate(n_na = purrr::map_dbl(.data$forward, ~sum(is.na(.x))),
+                  min_light = purrr::map_dbl(.data$forward, ~min(.x, na.rm = TRUE)),
+                  max_light = purrr::map_dbl(.data$forward, ~max(.x, na.rm = TRUE))) %>%
     dplyr::filter(.data$n_na == 0) %>%
     dplyr::mutate(n_unique = purrr::map_dbl(.data$forward,
                                             ~length(unique(.x)))) %>%
@@ -107,14 +124,14 @@ sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
     dplyr::filter(abs(.data$n_step) < 12) %>%
     dplyr::mutate(df = purrr::map(.data$forward,
                                   ~data.frame(y = .x, x = 1:length(.x))),
-                  model = purrr::map(.data$df, ~stats::lm(y ~ poly(x, 3), data = .x)),
+                  model = purrr::map(.data$df, ~stats::lm(y ~ poly(x, poly_order), data = .x)),
                   coef = purrr::map(.data$model, ~suppressWarnings(broom::glance(.x))),
                   dir = purrr::map_dbl(.data$model, ~stats::coef(.x)[2]))
 
   if(nrow(s) > 0) {
     s <- dplyr::select(s, .data$date, .data$time, .data$light,
                        .data$n_range, .data$coef, .data$dir, .data$type,
-                       .data$offset_applied) %>%
+                       .data$offset_applied, .data$min_light, .data$max_light) %>%
       tidyr::unnest(.data$coef) %>%
       dplyr::select(-.data$df, -.data$logLik, -.data$AIC, -.data$BIC,
                     -.data$deviance, -.data$df.residual) %>%
@@ -122,10 +139,11 @@ sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
                     .data$adj.r.squared > cutoff) %>%
       dplyr::mutate(dir = dplyr::if_else(.data$dir < 0, "sunset", "sunrise"),
                     n = as.integer(n),
-                    dur = n * interval) %>%
+                    dur = as.integer(n * interval/60)) %>%
       # i.e. sunrise must be in sunrise time
-      dplyr::filter(.data$dir == .data$type)
-
+      dplyr::filter(.data$dir == .data$type) %>%
+      # Must have some darkish points
+      dplyr::filter(.data$min_light <= ambig_dark)
 
     # If more than one in a day keep best performer
     if(nrow(s) > 0) {
@@ -133,7 +151,7 @@ sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
         dplyr::group_by(.data$date, .data$dir) %>%
         dplyr::arrange(dplyr::desc(.data$r.squared),
                        dplyr::desc(.data$adj.r.squared),
-                       .data$statistic, .data$p.value) %>%
+                       .data$statistic, .data$p.value, .by_group = TRUE) %>%
         dplyr::slice(1) %>%
         dplyr::ungroup()
     }
@@ -146,7 +164,7 @@ sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
     # Expect to vary by at least X levels of light
 
     # If light activity before sunrise or after sunset, not a true sunrise/set detection
-    if(filter_problems && nrow(s) > 0) s <- sun_filter(data, s)
+    if(filter_problems && nrow(s) > 0) s <- sun_filter(data, s, thresh_dark)
   } else {
     s <- dplyr::tibble(date = lubridate::as_date(NA),
                        time = lubridate::as_datetime(NA),
@@ -160,12 +178,7 @@ sun_detect <- function(data, n = 10, range = 10, cutoff = 0.95, loc = NULL,
   s
 }
 
-sun_filter <- function(data, times) {
-
-  # Get median time between observations
-  i <- stats::median(as.numeric(difftime(dplyr::lead(data$time),
-                                         data$time, units = "min")),
-                     na.rm = TRUE)
+sun_filter <- function(data, times, thresh_dark) {
 
   sun_n <- times$n[1]
 
@@ -174,7 +187,7 @@ sun_filter <- function(data, times) {
     dplyr::select(.data$time, .data$dir, .data$id) %>%
     tidyr::spread(.data$dir, .data$id) %>%
     dplyr::right_join(data, by = "time") %>%
-    dplyr::arrange(time)
+    dplyr::arrange(.data$time)
 
   if(!"sunrise" %in% names(data)) data$sunrise <- lubridate::ymd_hms(NA, tz = "UTC")
   if(!"sunset" %in% names(data)) data$sunset <-  lubridate::ymd_hms(NA, tz = "UTC")
@@ -186,6 +199,9 @@ sun_filter <- function(data, times) {
   ss <- which(!is.na(data$sunset))
 
   # Mark the two hours before sunrise and after set
+
+  # Get median time between observations (sec)
+  i <- res(data$time)/60
 
   for(s in sr) {
     n <- s - (1:(120/i))
@@ -204,13 +220,15 @@ sun_filter <- function(data, times) {
     tidyr::gather("dir", "id", .data$sunrise, .data$sunset) %>%
     dplyr::filter(!is.na(.data$id)) %>%
     dplyr::group_by(.data$dir, .data$id) %>%
-    dplyr::arrange(.data$time) %>%
-    dplyr::mutate(n = 1:length(.data$time)) %>%
-    dplyr::filter(!.data$n %in% 1:sun_n) %>%
-    dplyr::summarize(n_light = sum(.data$light > 0),
-                     max_light = max(.data$light)) %>%
-    # No more than 20 min of light events, no more than a max of 32 light
-    dplyr::filter(.data$n_light > (20/i) | .data$max_light > 32)
+    dplyr::arrange(.data$time)
+
+  if(nrow(problems) > 0) {
+    problems <- problems %>%
+      dplyr::summarize(n_light = sum(.data$light > thresh_dark),
+                       max_light = max(.data$light)) %>%
+      # No more than 20 min of light events
+      dplyr::filter(.data$n_light > (30/i))
+  }
 
   dplyr::filter(times, !.data$time %in% problems$id)
 }
@@ -237,9 +255,9 @@ sun_assume <- function(dates, loc) {
 sun_times <- function(loc, date, angle = 6,
                       interval = "none", type = "riseset") {
 
-  if(class(loc) == "numeric"){
+  if(is.numeric(loc)){
     loc <- matrix(loc, nrow = 1)
-  } else if(class(loc) == "data.frame") {
+  } else if(is.data.frame(loc)) {
     loc <- as.matrix(loc)
   }
 
