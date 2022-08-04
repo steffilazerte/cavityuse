@@ -59,7 +59,7 @@
 #'
 #' cavity_plot(wtsp, cavity = e, sun = s)
 #'
-#' # Use map from purrr package for multiple individuals
+#' # Use `map` from purrr package for multiple individuals
 #' library(dplyr)
 #' library(tidyr)
 #' library(purrr)
@@ -169,7 +169,7 @@ points_sun_times <- function(data, sun,
                       .data$light >= ambig_light ~ "out_ambig",
                       .data$light <= ambig_dark ~ "in_ambig",
                       TRUE ~ "ambig")) %>%
-      dplyr::arrange(time)
+      dplyr::arrange(.data$time)
   }
 }
 
@@ -344,7 +344,7 @@ cavity_fix <- function(cavity, loc, gap_cutoff) {
   # - A location is "in"
   # - and ends after sunset
   # - and occurs right before a "night" location
-  # chagne to "ambig"
+  # change to "ambig"
   # change next to "ambig"
 
 

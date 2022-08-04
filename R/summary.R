@@ -191,7 +191,7 @@ split_calc <- function(cavity, split, sun = NULL, loc = NULL) {
 
       cavity <- cavity %>%
         dplyr::mutate(date = lubridate::as_date(.data$splt)) %>%
-        dplyr::select(.data$date, .data$splt) %>%
+        dplyr::select("date", "splt") %>%
         dplyr::right_join(cavity_add, by = "date") %>%
         dplyr::bind_rows(cavity_keep) %>%
         dplyr::arrange(.data$start)

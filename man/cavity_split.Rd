@@ -40,7 +40,8 @@ Depending on your area of interest, when summarizing cavity use data, you'll wan
   \item \code{split = "midnight"} Split at midnight to separate cavity use between
   date, focusing on daytime patterns
   \item \code{split = "midday"} Split at noon to separate cavity use between days,
-  focusing on nighttime patterns
+  focusing on nighttime patterns. Dates for morning activity are assigned to
+  previous day.
 }
 }
 \examples{

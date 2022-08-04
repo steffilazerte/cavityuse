@@ -11,6 +11,7 @@ cavity_plot(
   loc = NULL,
   days = 10,
   start = NULL,
+  tz_apply_offset = TRUE,
   nrow = NULL,
   ncol = NULL,
   clip = TRUE,
@@ -35,6 +36,9 @@ observations (if not in the data, this must be provided if \code{show_night
 
 \item{start}{Character. Start date in "YYYY-MM-DD" format}
 
+\item{tz_apply_offset}{Logical. Apply a timezone offset to indicate local
+time on the x-axis. Only relevant if plotting light data alone.}
+
 \item{nrow}{Numeric. For multi-day figures, number of plot rows.}
 
 \item{ncol}{Numeric. For multi-day figures, number of plot cols.}
@@ -57,6 +61,9 @@ events and bouts of cavity use.
 
 # Light data only
 cavity_plot(flicker, days = 1)
+
+# Don't offset time to show local (i.e. leave as UTC)
+cavity_plot(flicker, days = 4, tz_apply_offset = FALSE)
 
 # Light data + sunrise/sunset
 s <- sun_detect(flicker)

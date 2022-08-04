@@ -86,7 +86,7 @@ e <- cavity_detect(wtsp, sun = s)
 
 cavity_plot(wtsp, cavity = e, sun = s)
 
-# Use map from purrr package for multiple individuals
+# Use `map` from purrr package for multiple individuals
 library(dplyr)
 library(tidyr)
 library(purrr)

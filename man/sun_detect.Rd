@@ -11,7 +11,12 @@ sun_detect(
   cutoff = 0.95,
   loc = NULL,
   local = TRUE,
-  filter_problems = TRUE
+  window = 3,
+  filter_problems = TRUE,
+  thresh_dark = 1,
+  ambig_dark = 10,
+  poly_order = 3,
+  max_light = 64
 )
 }
 \arguments{
@@ -35,10 +40,25 @@ in the data, this must be provided).}
 on coordinates (will speed up the function, but may result in problems if
 sunrise/sunset occur close to midnight)}
 
+\item{window}{Numeric. Number of hours around expected sunrise/sunset to
+look for evidence of actual sunrise/sunset. Only applies if `local = TRUE`.}
+
 \item{filter_problems}{Logical. Remove problematic sunrise/sunset events?
 Problematic events are defined as those which are preceded/proceeded by
 unexpectedly variable light levels (True sunrise/sunset events should only
 be preceded/proceeded by darkness)}
+
+\item{thresh_dark}{Numeric. Light levels below which are considered 'dark'}
+
+\item{ambig_dark}{Numeric. Light levels below which are considered 'darkish'}
+
+\item{poly_order}{Numeric. Polynomial order for modelling sunrise and sunset.
+For low resolution data (e.g. >=5min intervals), use 2, for higher
+resolution data (e.g., <=2min intervals) use 3. Play with this if
+sunrise/sunsets are consistently missclassified.}
+
+\item{max_light}{Numeric. Light levels to consider full brightness. Fixes
+problems with high resolution geolocators that record light into the 1000s}
 }
 \value{
 Data frame containing sunrise and sunset events

@@ -168,16 +168,17 @@ cavity_plot <- function(data, cavity = NULL, sun = NULL, loc = NULL,
                     date = lubridate::as_date(.data$rise_null))
     if(!tz_apply_offset) {
       sun_t <- tz_remove_offset(sun_t, cols = c("sunrise", "sunset")) %>%
-        mutate(rise_null = dplyr::if_else((lubridate::hour(sunset) + 12) < 24,
-                                          sunset - lubridate::days(1),
-                                          rise_null),
-               sunset = dplyr::if_else(
-                 lubridate::as_date(sunset) > lubridate::as_date(sunrise),
-                 lubridate::floor_date(sunset, unit = "day"),
-                 sunset),
-               set_null = dplyr::if_else((lubridate::hour(sunrise) - 12) > 0,
-                                         sunrise,
-                                         set_null))
+        dplyr::mutate(rise_null = dplyr::if_else(
+          (lubridate::hour(.data$sunset) + 12) < 24,
+          .data$sunset - lubridate::days(1),
+          .data$rise_null),
+          sunset = dplyr::if_else(
+            lubridate::as_date(.data$sunset) > lubridate::as_date(.data$sunrise),
+            lubridate::floor_date(.data$sunset, unit = "day"),
+            .data$sunset),
+          set_null = dplyr::if_else((lubridate::hour(.data$sunrise) - 12) > 0,
+                                    .data$sunrise,
+                                    .data$set_null))
     }
 
     g <- g +

@@ -3,30 +3,37 @@ context("cavity_detect")
 
 test_that("cavity_detects works as expected", {
   s <- sun_detect(flicker)
-  expect_silent(e <- cavity_detect(flicker, s))
+  expect_silent(e <- cavity_detect(flicker, sun = s))
 
   expect_is(e, "data.frame")
-  expect_equal(nrow(e), 213)
-  expect_equal(ncol(e), 9)
+  expect_gt(nrow(e), 10)
+  expect_named(e, c("date", "start", "end", "length_hrs", "location",
+                    "offset_applied", "lon", "lat",
+                    "thresh_dark", "thresh_light", "ambig_dark", "ambig_light"))
 
   expect_equal(unique(e$date), unique(flicker$date))
-  expect_true(all(format(e$start[!e$start %in% flicker$time], "%H:%M:%S") == "00:00:00"))
-  expect_true(all(format(e$end[!e$end %in% flicker$time], "%H:%M:%S") == "23:59:59"))
+
+  # Need to make comparable by applying offset
+  orig_time <- tz_apply_offset(flicker, tz_offset = -8)$time
+
+  expect_true(all(format(e$start[!e$start %in% orig_time], "%H:%M:%S") == "00:00:00"))
+  expect_true(all(format(e$end[!e$end %in% orig_time], "%H:%M:%S") == "23:59:59"))
 
   expect_true(all(e$end >= e$start, na.rm = TRUE))
   expect_true(all(e$end < dplyr::lead(e$start), na.rm = TRUE))
 
   # check values
   expect_equal(e$start[1:2],
-               as.POSIXct(c("2011-06-17 00:00:50", "2011-06-17 03:40:50"),
-                          tz = lubridate::tz(flicker$time)))
+               as.POSIXct(c("2011-06-17 00:00:50", "2011-06-17 03:54:50"),
+                          tz = "UTC"))
 
   expect_equal(e$end[1:2],
-               as.POSIXct(c("2011-06-17 03:38:50", "2011-06-17 04:04:50"),
-                          tz = lubridate::tz(flicker$time)))
+               as.POSIXct(c(e$start[2] - lubridate::minutes(2),
+                            e$start[3] - lubridate::minutes(2)),
+                          tz = "UTC"))
 
-  expect_equal(e$length_hrs[1:2], c(3.6333333333, 0.4))
-  expect_equal(e$location[1:2], c("out", "out"))
+  expect_equal(e$length_hrs[1:3], c(3.86666666, 0, 0.033333333))
+  expect_equal(e$location[1:3], c("in", "in_ambig", "ambig"))
 
   # check patterns
   n <- cavity_split(e, split = "riseset", sun = s,

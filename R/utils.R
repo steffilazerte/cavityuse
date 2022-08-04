@@ -14,8 +14,8 @@ check_cols <- function(x, cols) {
 }
 
 check_class <- function(x, c) {
- if(class(x) != c)  {
-   if(class(x) %in% c("integer", "numeric") & c %in% c("integer", "numeric")) {
+ if(!inherits(x, c))  {
+   if((is.integer(x) | is.numeric(x)) & c %in% c("integer", "numeric")) {
      return()
    }
    stop(deparse(substitute(x)), " is formated as ", class(x),
@@ -110,8 +110,20 @@ check_tz <- function(tz) {
   tz
 }
 
+#' Use location to find TZ offset
+#'
+#' Uses location to establish what the non-daylight-savings offset would be
+#' from UTC.
+#'
+#' @param lon Numeric. Decimal degree longitude
+#' @param lat Numeric. Decimal degree latitude
+#'
 #' @export
 tz_find_offset <- function(lon, lat) {
+  if(!requireNamespace("sf", quietly = TRUE)) {
+    stop("Package 'sf' required to accurately calculate timezone offsets.",
+         "Install with install.packages('sf')", call. = FALSE)
+  }
   lutz::tz_lookup_coords(lat[1], lon[1], method = "accurate") %>%
     lutz::tz_offset(lubridate::ymd("2020-01-01"), .) %>%
     dplyr::pull(.data$utc_offset_h)
@@ -126,6 +138,17 @@ is_dst <- function(tz) {
 }
 
 
+#' Apply tz offset without changing timezone
+#'
+#' @param data Data frame with "col" column
+#'
+#' @param tz_offset Numeric. Number of hours for the offset
+#' @param cols Character vector. Time columns over which to apply the offset
+#'
+#' Applies a straight time shift to time columns and records this as an additional
+#' column `tz_offset`. If a `tz_offset` has already been applied, it is first
+#' removed.
+#'
 #' @export
 tz_apply_offset <- function(data, tz_offset, cols = "time") {
   if("offset_applied" %in% names(data) && all(data$offset_applied != 0)) {
@@ -138,12 +161,21 @@ tz_apply_offset <- function(data, tz_offset, cols = "time") {
 
   for(col in cols) {
     data <- dplyr::mutate(data,
-                          !!col := .data[[col]] + lubridate::hours(!!tz_offset),
-                          offset_applied = !!tz_offset)
+                          {{col}} := .data[[col]] + lubridate::hours(.env$tz_offset),
+                          offset_applied = .env$tz_offset)
   }
   data
 }
 
+#' Remove timezone offset
+#'
+#' If a timezone offset was applied with `tz_apply_offset()`, this function
+#' will remove it.
+#'
+#' @param data Data frame with `cols` time columns#'
+#' @param cols Character vector. Time columns from which to remove the offset
+#'
+#'
 #' @export
 tz_remove_offset <- function(data, cols = "time") {
   if(!"offset_applied" %in% names(data)) {
@@ -156,8 +188,9 @@ tz_remove_offset <- function(data, cols = "time") {
   }
 
   for(col in cols) {
-    data <- dplyr::mutate(data,
-                          !!col := .data[[col]] - lubridate::hours(.data$offset_applied))
+    data <- dplyr::mutate(
+      data,
+      {{col}} := .data[[col]] - lubridate::hours(.data$offset_applied))
   }
   dplyr::mutate(data, offset_applied = 0)
 }
