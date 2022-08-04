@@ -96,10 +96,11 @@ cavity_detect <- function(data, sun = NULL, loc = NULL, n = 2,
     check_time(sun$time)
     sun <- check_date(sun)
   } else {
-    sun <- dplyr::select(data, date, time, light, offset_applied) %>%
-      dplyr::filter(is.na(light)) %>%
-      dplyr::mutate(dir = NA_character_, n_range = NA_real_,
-                    n = NA_integer_, dur = NA_real_)
+    sun <- dplyr::tibble(date = lubridate::NA_Date_,
+                         time = lubridate::NA_POSIXct_,
+                         dir = NA_character_, n_range = NA_real_,
+                         n = NA_integer_, dur = NA_real_,
+                         offset_applied = NA_real_, .rows = 0)
   }
 
   # Ungoup
@@ -145,9 +146,7 @@ points_sun_times <- function(data, sun,
     n_sun <- sun$n[1] # Number of light observations (see ?sun_detect)
 
     # Sunrise/set time in seconds
-    i <- stats::median(as.numeric(difftime(dplyr::lead(data$time),
-                                           data$time, units = "secs")),
-                       na.rm = TRUE) * n_sun
+    i <- res(data$time) * n_sun
 
     data <- sun %>%
       dplyr::select(-.data$n, -.data$n_range) %>%
@@ -252,9 +251,8 @@ cavity_simplify <- function(cavity, gap_cutoff) {
                              .data$location == "ambig",
                            dplyr::lead(.data$location), .data$location))
 
-  cavity <- dplyr::mutate(cavity,
-                          int = as.numeric(difftime(dplyr::lead(.data$time),
-                                                    .data$time, units = "min")))
+  cavity <- dplyr::mutate(cavity, int = res(.data$time) / 60)
+
   # Get overall bout types and times
   cavity <- dplyr::mutate(cavity, type = dplyr::case_when(
     # Single point of a given type

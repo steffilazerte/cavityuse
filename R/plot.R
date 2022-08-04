@@ -86,9 +86,7 @@ cavity_plot <- function(data, cavity = NULL, sun = NULL, loc = NULL,
 
   if(clip) data$light[data$light > 64] <- 64
 
-  i <- difftime(dplyr::lead(data$time), data$time, units = "sec") %>%
-    stats::median(., na.rm = TRUE) %>%
-    as.numeric(.)/2
+  i <- res(data$time)/2
 
   data <- dplyr::filter(data, .data$time >= start_plot,
                         .data$time < start_plot + lubridate::days(days)) %>%

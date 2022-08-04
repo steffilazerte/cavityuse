@@ -69,8 +69,16 @@ check_loc <- function(x, loc) {
                                call. = FALSE)
     }
   }
+  if(is.null(names(loc))) names(loc) <- c("lon", "lat")
   loc
 }
+
+res <- function(time) {
+  difftime(dplyr::lead(time), time, units = "sec") %>%
+    stats::median(., na.rm = TRUE) %>%
+    as.numeric(.)
+}
+
 
 # From Andy Teucher
 arg_match <- function(arg) {
