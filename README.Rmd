@@ -1,8 +1,10 @@
 ---
 output: github_document
 ---
-
-[![Build Status](https://travis-ci.org/steffilazerte/cavityuse.svg?branch=master)](https://travis-ci.org/steffilazerte/cavityuse) [![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/l2afqnduhmmir3xl/branch/master?svg=true)](https://ci.appveyor.com/project/steffilazerte/cavityuse/branch/master) [![codecov](https://codecov.io/gh/steffilazerte/cavityuse/branch/master/graph/badge.svg)](https://codecov.io/gh/steffilazerte/cavityuse)
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/steffilazerte/cavityuse/workflows/R-CMD-check/badge.svg)](https://github.com/steffilazerte/cavityuse/actions)
+[![codecov](https://codecov.io/gh/steffilazerte/cavityuse/branch/master/graph/badge.svg)](https://codecov.io/gh/steffilazerte/cavityuse)
+<!-- badges: end -->
 
 # cavityuse  
 _Detecting Cavity Use From Geolocator Data_  
@@ -18,10 +20,12 @@ knitr::opts_chunk$set(fig.path = "man/figures/", out.width = "100%",
 
 ## Installing `cavityuse`
 
-You can use the `devtools` package to install `cavityuse` directly from GitHub
+You can install `cavityuse` directly from my R-Universe:
 
 ```{r, eval = FALSE}
-devtools::install_github("steffilazerte/cavityuse")
+install.packages("cavityuse", 
+                 repos = c("https://steffilazerte.r-universe.dev", 
+                           "https://cloud.r-project.org"))
 ```
 
 ## Getting started
@@ -80,19 +84,11 @@ Consider using the [`lubridate`](https://lubridate.tidyverse.org/) package to fo
 
 ### Timezones  
 
-Although most geolocator data is in the UTC timezone, to more efficiently detect sunrise/sunset times, your data should be in the timezone of your location (non-daylight savings).
+Most geolocator data is in the UTC timezone, and although previous versions of cavityuse recommended converting your data to your the timezone of your location (non-daylight savings), I now recommend 
+keeping it in UTC. cavityuse will apply a timezone offset to your data according to the location.
+
+This means that the time output by cavityuse will be in UTC according to R, however it will actually have had an offset applied (noted in the new column `tz_offset`). This just makes things simpler.
  
-You can use the `tz_find_offset` function to determine what timezone this would be, and the `with_tz` function from the lubridate package to assign this timezone to your data:
-
-```{r}
-tz_offset("America/Vancouver")
-```
-
-```{r, eval = FALSE}
-library(lubridate)
-data$time <- with_tz(data$time, "Etc/GMT+8")
-```
-
 ### Coordinates
 `cavityuse` functions require coordinates in order to more efficiently detect sunrise/sunset times, but also to estimate sunrise/sunset when they are not detected in the data. 
 
@@ -103,7 +99,7 @@ You can supply coordinates in one of two ways.
 dplyr::select(flicker, time, light, lon, lat)
 ```
 
-- You can have a separte variable that you supply to each function (order matters, and must be `lon`, `lat`):
+- You can have a separate variable that you supply to each function (order matters, and must be `lon`, `lat`):
 ```{r, eval = FALSE}
 sun_times(data, loc = c(-120.3408, 50.67611))
 ```
@@ -114,7 +110,7 @@ sun_times(data, loc = c(-120.3408, 50.67611))
 Right now, `cavityuse` is limited to the follow scenarios:
 
 - **No big changes in location (i.e. No migration)**
-  Changes in location can interfere with how `cavityuse` assigns activity based on sunrise/sunset times which are inferred from lon/lat (this may change in the future)
+  Changes in location can interfere with how `cavityuse` assigns activity based on sunrise/sunset times which are inferred from lon/lat (this may change in the future). Minor migratory changes can be accommodated, and larger ones can be somewhat handled by splitting the data by location (different lat/lons) and applying `cavity_detect()` to each set of locations. But this isn't perfect.
 - **No extreme latitudes**
   Because of the way `cavityuse` detects sunrise and sunset, extremely latitudes may result in unpredicatable behaviour (this should hopefully be fixed in the future)
 - **Animals which use cavities at night, must normally enter their cavity _before_ it gets dark and exit _after_ it gets light**
